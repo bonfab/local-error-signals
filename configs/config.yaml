@@ -1,0 +1,18 @@
+# default training configuration
+defaults:
+    - train: train_gpu.yaml
+    - model: vgg.yaml
+    - data: cifar10.yaml
+    #- log: null  # set logger here or use command line (e.g. `python run.py logger=wandb`)
+
+    #- experiment: null
+
+    - hydra: default.yaml
+
+
+work_dir: ${hydra:runtime.cwd}
+
+# path to folder with data
+data_dir: ${work_dir}/data/
+
+

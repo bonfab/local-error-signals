@@ -1,0 +1,20 @@
+version: '3'
+services:
+
+  experiments:
+    build: .
+    ports:
+      - 127.0.0.1:8888:9999
+    volumes:
+      - ./data:/experiments/data
+      - ./logs:/experiments/logs
+      
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['1']
+            capabilities: [gpu]
+
+
