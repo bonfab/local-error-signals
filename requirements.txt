@@ -3,7 +3,9 @@ tqdm
 omegaconf
 hydra-core
 munch
+jupyter
+matplotlib
+seaborn
+pandas
 
-https://download.pytorch.org/whl/torch_stable.html
-torch==1.8.1
 torchvision==0.9.1

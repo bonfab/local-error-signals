@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:1.8.1-cuda10.2-cudnn8-devel
+FROM pytorch/pytorch:1.8.1-cuda11.1-cudnn8-devel
 
 RUN apt-get update && apt-get upgrade -y
 
@@ -22,12 +22,12 @@ RUN python3 -m pip install --no-cache-dir -r /requirements.txt
 
 EXPOSE 8888
 
-RUN mkdir /experiment && mkdir /experiment/data && /experiment/logs
-RUN chmod 777 /experiment
+RUN mkdir /experiments
+RUN chmod 777 /experiments
 
-WORKDIR experiment
+WORKDIR experiments
 COPY src .
 
 
-CMD ["jupyter", "notebook", "--allow-root", "--notebook-dir=/experiment", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=localerror"]
+CMD ["jupyter", "notebook", "--allow-root", "--notebook-dir=/experiments", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=localerror"]
 
