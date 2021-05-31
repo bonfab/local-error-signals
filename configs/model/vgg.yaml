@@ -1,0 +1,13 @@
+# @package _group_
+name: vgg6a
+dropout: 0
+num_layers: 1
+num_hidden: 1024
+print_stats: True
+loss:
+  backprop: False
+  loss_sup: predsim
+  bio: False
+  dim_in_decoder: 4096
+  alpha: 0
+  beta: 0.99
