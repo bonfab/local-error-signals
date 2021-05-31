@@ -9,6 +9,7 @@ defaults:
 
     - hydra: default.yaml
 
+logging_level: debug
 
 work_dir: ${hydra:runtime.cwd}
 

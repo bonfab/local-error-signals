@@ -4,8 +4,10 @@ import torchvision
 import torchvision.transforms as transforms
 
 
-def get_datasets(cfg, data_dir):
-    if cfg.name == "CIFAR-10":
+def get_datasets(cfg, data_dir, logger=None):
+    if logger is not None:
+        logger.info(f'selecting dataset {cfg.name}')
+    if cfg.name.__contains__("CIFAR-10"):
         return get_CIFAR10_train_test(data_dir)
     else:
         raise ValueError(f"Dataset {cfg.name} not supported")

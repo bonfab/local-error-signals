@@ -1,3 +1,5 @@
+import logging
+
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -5,6 +7,7 @@ from tqdm import tqdm
 
 from src.utils.data import to_one_hot
 from src.models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
+from src.utils.logging import get_logger, get_csv_logger
 from src.utils.models import count_parameters
 
 
@@ -13,9 +16,11 @@ class Trainer:
     def __init__(self, cfg, model, train_set, valid_set, logger=None):
         self.cfg = cfg
         self.model = model
-
-        print(model)
-        print(f'Model has {count_parameters(model)} parameters influenced by global loss')
+        if logger is None:
+            self.logger = get_logger(__name__, logging.INFO)
+        self.csv_logger = get_csv_logger(file_path='training_results.csv')
+        logger.info(model.__str__())
+        logger.info(f'Model has {count_parameters(model)} parameters influenced by global loss')
 
         self.train_set = train_set
         self.valid_set = valid_set
@@ -99,10 +104,11 @@ class Trainer:
                 pbar.set_postfix(loss=loss.item(), refresh=False)
                 pbar.update()
 
+            #break
+
         if self.cfg.progress_bar:
             pbar.close()
 
-        # Format and print debug string
         loss_average_local = loss_total_local / len(self.train_loader.dataset)
         loss_average_global = loss_total_global / len(self.train_loader.dataset)
         error_percent = 100 - 100.0 * float(correct) / len(self.train_loader.dataset)
@@ -120,13 +126,13 @@ class Trainer:
                     string_print += m.print_stats() 
         print(string_print)"""
 
-        return loss_average_local + loss_average_global, error_percent  # , string_print
-
+        return loss_average_local, loss_average_global, error_percent  # , string_print
 
     def validate(self):
-        ''' Run model on test set '''
+        ''' Run model on validation set '''
         self.model.eval()
-        test_loss = 0
+        loss_total_local = 0
+        valid_loss = 0
         correct = 0
 
         # Clear layerwise statistics
@@ -135,7 +141,7 @@ class Trainer:
                 if isinstance(m, LocalLossBlockLinear) or isinstance(m, LocalLossBlockConv):
                     m.clear_stats()
 
-        # Loop test set
+        # Loop valid set
         for data, target in self.valid_loader:
             if self.cfg.gpus:
                 data, target = data.cuda(), target.cuda()
@@ -145,37 +151,42 @@ class Trainer:
                 target_onehot = target_onehot.cuda()
 
             with torch.no_grad():
-                output, _ = self.model(data, target, target_onehot)
-                test_loss += F.cross_entropy(output, target).item() * data.size(0)
+                output, loss = self.model(data, target, target_onehot)
+                loss_total_local += loss * data.size(0)
+                valid_loss += F.cross_entropy(output, target).item() * data.size(0)
             pred = output.max(1)[1]  # get the index of the max log-probability
             correct += pred.eq(target_).cpu().sum()
 
-        # Format and print debug string
-        loss_average = test_loss / len(self.valid_loader.dataset)
+            #break
+
+        loss_average_local = loss_total_local / len(self.train_loader.dataset)
+        loss_average = valid_loss / len(self.valid_loader.dataset)
         if self.cfg.loss_sup == 'predsim' and not self.cfg.backprop:
             loss_average *= (1 - self.cfg.beta)
         error_percent = 100 - 100.0 * float(correct) / len(self.valid_loader.dataset)
-        string_print = 'Validate loss_global={:.4f}, error={:.3f}%\n'.format(loss_average, error_percent)
+        """string_print = 'Validate loss_global={:.4f}, error={:.3f}%\n'.format(loss_average, error_percent)
         if not self.cfg.no_print_stats:
             for m in self.model.modules():
                 if isinstance(m, LocalLossBlockLinear) or isinstance(m, LocalLossBlockConv):
                     string_print += m.print_stats()
-        print(string_print)
+        print(string_print)"""
 
-        return loss_average, error_percent, string_print
-
+        return loss_average_local, loss_average, error_percent,
 
     def fit(self):
         ''' The main training and testing loop '''
         # start_epoch = 1 if checkpoint is None else 1 + checkpoint['epoch']
 
         # TODO: add checkpoint loading
-        for epoch in range(self.cfg.epochs + 1):
+        for epoch in range(self.cfg.epochs):
             # Train and test
-            train_loss, train_error = self.trainiter()
-            print(train_loss, train_error)
-            test_loss, test_error= self.validate()
-            print(test_loss, test_error)
+            train_loss_local, train_loss_global, train_error = self.trainiter()
+            self.log_results(epoch, train_loss_local, train_loss_global, train_error, msg='Train Run')
+            valid_loss_local, valid_loss_global, valid_error = self.validate()
+            self.log_results(epoch, valid_loss_local, valid_loss_global, valid_error, msg='Validation Run')
+            self.csv_logger.info(f'{epoch},'
+                                     f'{train_loss_local},{train_loss_global},{train_error},'
+                                     f'{valid_loss_local},{valid_loss_global},{valid_error}')
 
             """
             # Check if to save checkpoint
@@ -231,3 +242,12 @@ class Trainer:
                     'test_loss': test_loss,
                     'test_error': test_error,
                 }, os.path.join(dirname, 'chkp_last_epoch.tar'))"""
+
+    def log_results(self, epoch, local_loss, global_loss, accuracy, msg=""):
+        self.logger.info(f'{msg}\n\t\t'
+                         f'epoch: {epoch}\n\t\t'
+                         f'local loss: {local_loss:.4f}\n\t\t'
+                         f'global loss: {global_loss:.4f}\n\t\t'
+                         f'accuracy: {accuracy:.3f}\n\t\t'
+                         f'mem: {torch.cuda.memory_allocated() / 1e6:.0f} MiB\n\t\t'
+                         f'max mem: {torch.cuda.max_memory_allocated() / 1e6:.0f} MiB')

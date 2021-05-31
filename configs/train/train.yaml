@@ -1,7 +1,7 @@
 # @package _group_
 gpu: 0
 lr: 0.001
-epochs: 10
+epochs: 1
 batch_size: 64
 optim: adam
 weight_decay: 0

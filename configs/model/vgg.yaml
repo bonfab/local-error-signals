@@ -3,7 +3,7 @@ name: vgg6a
 dropout: 0
 num_layers: 1
 num_hidden: 1024
-print_stats: True
+print_stats: False
 loss:
   backprop: False
   loss_sup: predsim

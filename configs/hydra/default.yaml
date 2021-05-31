@@ -4,3 +4,5 @@ run:
 sweep:
     dir: ../logs/multiruns/${now:%Y-%m-%d_%H-%M-%S}
     subdir: ${hydra.job.num}
+
+verbose: False

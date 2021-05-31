@@ -1,7 +1,9 @@
 from src.models.VGG import VGGn
 
 
-def get_model(cfg):
+def get_model(cfg, logger=None):
+    if logger is not None:
+        logger.info(f'Selecting model {cfg.name}')
     if cfg.name.startswith('vgg'):
         return VGGn(cfg.loss, cfg.name, cfg.input_dim, cfg.num_layers, cfg.num_hidden, cfg.num_classes, cfg.dropout, 1)
 
