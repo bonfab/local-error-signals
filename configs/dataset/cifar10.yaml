@@ -1,0 +1,7 @@
+# @package _group_
+name: CIFAR-10
+input_dim: # channel, height, width
+  - 3
+  - 32
+  - 32
+num_classes: 10

@@ -13,9 +13,9 @@ def main(cfg: OmegaConf):
 
     logger = get_logger(__name__, level=str_to_logging_level(cfg.logging_level))
     logger.info(OmegaConf.to_yaml(cfg).__str__())
-    train_set, test_set = get_datasets(cfg.data, cfg.data_dir, logger)
-    cfg.model['input_dim'] = cfg.data['input_dim']
-    cfg.model['num_classes'] = cfg.data['num_classes']
+    train_set, test_set = get_datasets(cfg.dataset, cfg.data_dir, logger)
+    cfg.model['input_dim'] = cfg.dataset['input_dim']
+    cfg.model['num_classes'] = cfg.dataset['num_classes']
     cfg.model.loss['optim'] = cfg.train['optim']
     cfg.model.loss['weight_decay'] = cfg.train['weight_decay']
     model = get_model(cfg.model, logger)
