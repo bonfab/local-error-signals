@@ -1,8 +1,8 @@
 import hydra
 from omegaconf import OmegaConf
 
-from src.train import Trainer
-from src.utils.logging import get_logger, str_to_logging_level
+from train import Trainer
+from utils.logging import get_logger, str_to_logging_level
 from utils.data import get_datasets
 from utils.models import get_model
 

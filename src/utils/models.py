@@ -1,4 +1,4 @@
-from src.models.VGG import VGGn
+from models.VGG import VGGn
 
 
 def get_model(cfg, logger=None):

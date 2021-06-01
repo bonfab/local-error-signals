@@ -6,10 +6,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
 
-from src.utils.data import to_one_hot
-from src.models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
-from src.utils.logging import get_logger, get_csv_logger
-from src.utils.models import count_parameters
+from utils.data import to_one_hot
+from models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
+from utils.logging import get_logger, get_csv_logger
+from utils.models import count_parameters
 
 
 class Trainer:
@@ -187,11 +187,9 @@ class Trainer:
             valid_loss_local, valid_loss_global, valid_error = self.validate()
             self.log_results(epoch, valid_loss_local, valid_loss_global, valid_error, msg='Validation Run')
             self.csv_logger.info(f'{epoch},'
-                                     f'{train_loss_local},{train_loss_global},{train_error},'
-                                     f'{valid_loss_local},{valid_loss_global},{valid_error}')
+                                 f'{train_loss_local},{train_loss_global},{train_error},'
+                                 f'{valid_loss_local},{valid_loss_global},{valid_error}')
             self.save_checkpoint(epoch, self.model, self.optimizer)
-
-
 
     def save_checkpoint(self, epoch, model, optimizer):
         # Check if to save checkpoint

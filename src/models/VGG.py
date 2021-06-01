@@ -3,7 +3,7 @@ from functools import reduce
 from torch import nn
 from operator import mul
 
-from src.models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
+from models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
 
 
 class Net(nn.Module):
