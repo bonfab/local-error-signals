@@ -67,7 +67,7 @@ class LinearFA(nn.Module):
 
         self.reset_parameters()
 
-        if self.args.cuda:
+        if self.args.gpus:
             self.weight.data = self.weight.data.cuda()
             self.weight_fa.data = self.weight_fa.data.cuda()
             if bias:
@@ -206,7 +206,7 @@ class LocalLossBlockLinear(nn.Module):
                 x_hat = self.nonlin(self.decoder_x(h))
                 loss_unsup = F.mse_loss(x_hat, x.detach())
             else:
-                if self.args.cuda:
+                if self.args.gpus:
                     loss_unsup = torch.cuda.FloatTensor([0])
                 else:
                     loss_unsup = torch.FloatTensor([0])
@@ -224,7 +224,7 @@ class LocalLossBlockLinear(nn.Module):
             elif self.args.loss_sup == 'pred':
                 y_hat_local = self.decoder_y(h.view(h.size(0), -1))
                 if self.args.bio:
-                    float_type = torch.cuda.FloatTensor if self.args.cuda else torch.FloatTensor
+                    float_type = torch.cuda.FloatTensor if self.args.gpus else torch.FloatTensor
                     y_onehot_pred = self.proj_y(y_onehot).gt(0).type(float_type).detach()
                     loss_sup = F.binary_cross_entropy_with_logits(y_hat_local, y_onehot_pred)
                 else:
@@ -237,7 +237,7 @@ class LocalLossBlockLinear(nn.Module):
                 y_hat_local = self.decoder_y(h.view(h.size(0), -1))
                 if self.args.bio:
                     Ry = similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
-                    float_type = torch.cuda.FloatTensor if self.args.cuda else torch.FloatTensor
+                    float_type = torch.cuda.FloatTensor if self.args.gpus else torch.FloatTensor
                     y_onehot_pred = self.proj_y(y_onehot).gt(0).type(float_type).detach()
                     loss_pred = (1 - self.args.beta) * F.binary_cross_entropy_with_logits(y_hat_local, y_onehot_pred)
                 else:
@@ -443,7 +443,7 @@ class LocalLossBlockConv(nn.Module):
                 x_hat = self.nonlin(self.decoder_x(h))
                 loss_unsup = F.mse_loss(x_hat, x.detach())
             else:
-                if self.args.cuda:
+                if self.args.gpus:
                     loss_unsup = torch.cuda.FloatTensor([0])
                 else:
                     loss_unsup = torch.FloatTensor([0])
@@ -463,7 +463,7 @@ class LocalLossBlockConv(nn.Module):
                     h = self.avg_pool(h)
                 y_hat_local = self.decoder_y(h.view(h.size(0), -1))
                 if self.args.bio:
-                    float_type = torch.cuda.FloatTensor if self.args.cuda else torch.FloatTensor
+                    float_type = torch.cuda.FloatTensor if self.args.gpus else torch.FloatTensor
                     y_onehot_pred = self.proj_y(y_onehot).gt(0).type(float_type).detach()
                     loss_sup = F.binary_cross_entropy_with_logits(y_hat_local, y_onehot_pred)
                 else:
@@ -478,7 +478,7 @@ class LocalLossBlockConv(nn.Module):
                 y_hat_local = self.decoder_y(h.view(h.size(0), -1))
                 if self.args.bio:
                     Ry = similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
-                    float_type = torch.cuda.FloatTensor if self.args.cuda else torch.FloatTensor
+                    float_type = torch.cuda.FloatTensor if self.args.gpus else torch.FloatTensor
                     y_onehot_pred = self.proj_y(y_onehot).gt(0).type(float_type).detach()
                     loss_pred = (1 - self.args.beta) * F.binary_cross_entropy_with_logits(y_hat_local, y_onehot_pred)
                 else:

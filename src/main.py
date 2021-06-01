@@ -18,6 +18,7 @@ def main(cfg: OmegaConf):
     cfg.model['num_classes'] = cfg.dataset['num_classes']
     cfg.model.loss['optim'] = cfg.train['optim']
     cfg.model.loss['weight_decay'] = cfg.train['weight_decay']
+    cfg.model['gpus'] = cfg.train['gpus']
     model = get_model(cfg.model, logger)
     trainer = Trainer(cfg.train, model, train_set, test_set, logger)
     trainer.fit()
