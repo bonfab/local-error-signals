@@ -1,4 +1,5 @@
 import logging
+import os
 
 import torch
 import torch.nn.functional as F
@@ -16,11 +17,12 @@ class Trainer:
     def __init__(self, cfg, model, train_set, valid_set, logger=None):
         self.cfg = cfg
         self.model = model
+        self.logger = logger
         if logger is None:
             self.logger = get_logger(__name__, logging.INFO)
         self.csv_logger = get_csv_logger(file_path='training_results.csv')
-        logger.info(model.__str__())
-        logger.info(f'Model has {count_parameters(model)} parameters influenced by global loss')
+        self.logger.info(model.__str__())
+        self.logger.info(f'Model has {count_parameters(model)} parameters influenced by global loss')
 
         self.train_set = train_set
         self.valid_set = valid_set
@@ -104,7 +106,7 @@ class Trainer:
                 pbar.set_postfix(loss=loss.item(), refresh=False)
                 pbar.update()
 
-            #break
+            break
 
         if self.cfg.progress_bar:
             pbar.close()
@@ -157,7 +159,7 @@ class Trainer:
             pred = output.max(1)[1]  # get the index of the max log-probability
             correct += pred.eq(target_).cpu().sum()
 
-            #break
+            break
 
         loss_average_local = loss_total_local / len(self.train_loader.dataset)
         loss_average = valid_loss / len(self.valid_loader.dataset)
@@ -187,61 +189,19 @@ class Trainer:
             self.csv_logger.info(f'{epoch},'
                                      f'{train_loss_local},{train_loss_global},{train_error},'
                                      f'{valid_loss_local},{valid_loss_global},{valid_error}')
+            self.save_checkpoint(epoch, self.model, self.optimizer)
 
-            """
-            # Check if to save checkpoint
-            if args.save_dir is not '':
-                # Resolve log folder and checkpoint file name
-                filename = 'chkp_ep{}_lr{:.2e}_trainloss{:.2f}_testloss{:.2f}_trainerr{:.2f}_testerr{:.2f}.tar'.format(
-                        epoch, lr, train_loss, test_loss, train_error, test_error)
-                dirname = os.path.join(args.save_dir, args.dataset)
-                dirname = os.path.join(dirname, '{}_mult{:.1f}'.format(args.model, args.feat_mult))
-                dirname = os.path.join(dirname, '{}_{}x{}_{}_{}_dimdec{}_alpha{}_beta{}_bs{}_cpb{}_drop{}{}_bn{}_{}_wd{}_bp{}_detach{}_lr{:.2e}'.format(
-                        args.nonlin, args.num_layers, args.num_hidden, args.loss_sup + '-bio' if args.bio else args.loss_sup, args.loss_unsup, args.dim_in_decoder, args.alpha,
-                        args.beta, args.batch_size, args.classes_per_batch, args.dropout, '_cutout{}x{}'.format(args.n_holes, args.length) if args.cutout else '',
-                        int(not args.no_batch_norm), args.optim, args.weight_decay, int(args.backprop), int(not args.no_detach), args.lr))
-    
-                # Create log directory
-                if not os.path.exists(dirname):
-                    os.makedirs(dirname)
-                elif epoch==1 and os.path.exists(dirname):
-                    # Delete old files
-                    for f in os.listdir(dirname):
-                        os.remove(os.path.join(dirname, f))
-    
-                # Add log entry to log file
-                with open(os.path.join(dirname, 'log.txt'), 'a') as f:
-                    if epoch == 1:
-                        f.write('{}\n\n'.format(args))
-                        f.write('{}\n\n'.format(model))
-                        f.write('{}\n\n'.format(optimizer))
-                        f.write('Model {} has {} parameters influenced by global loss\n\n'.format(args.model, count_parameters(model)))
-                    f.write(train_print)
-                    f.write(test_print)
-                    f.write('\n')
-                    f.close()
-    
-                # Save checkpoint for every epoch
-                torch.save({
-                    'epoch': epoch,
-                    'args': args,
-                    'state_dict': model.state_dict() if (save_state_dict or epoch==args.epochs) else None,
-                    'train_loss': train_error,
-                    'train_error': train_error,
-                    'test_loss': test_loss,
-                    'test_error': test_error,
-                }, os.path.join(dirname, filename))
-    
-                # Save checkpoint for last epoch with state_dict (for resuming)
-                torch.save({
-                    'epoch': epoch,
-                    'args': args,
-                    'state_dict': model.state_dict(),
-                    'train_loss': train_error,
-                    'train_error': train_error,
-                    'test_loss': test_loss,
-                    'test_error': test_error,
-                }, os.path.join(dirname, 'chkp_last_epoch.tar'))"""
+
+
+    def save_checkpoint(self, epoch, model, optimizer):
+        # Check if to save checkpoint
+        if self.cfg.checkpointing:
+            os.makedirs(self.cfg.checkpoint_dir, exist_ok=True)
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'optimizer': optimizer.state_dict()
+
+            }, os.path.join(self.cfg.checkpoint_dir, f'{epoch}.pt'))
 
     def log_results(self, epoch, local_loss, global_loss, accuracy, msg=""):
         self.logger.info(f'{msg}\n\t\t'
