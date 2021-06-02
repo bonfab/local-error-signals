@@ -106,7 +106,7 @@ class Trainer:
                 pbar.set_postfix(loss=loss.item(), refresh=False)
                 pbar.update()
 
-            break
+            #break
 
         if self.cfg.progress_bar:
             pbar.close()
@@ -159,7 +159,7 @@ class Trainer:
             pred = output.max(1)[1]  # get the index of the max log-probability
             correct += pred.eq(target_).cpu().sum()
 
-            break
+            #break
 
         loss_average_local = loss_total_local / len(self.train_loader.dataset)
         loss_average = valid_loss / len(self.valid_loader.dataset)

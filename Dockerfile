@@ -25,9 +25,8 @@ EXPOSE 8888
 RUN mkdir /experiments
 RUN chmod 777 /experiments
 
-WORKDIR experiments
+WORKDIR /experiments
 COPY src .
 
 
 CMD ["jupyter", "notebook", "--allow-root", "--notebook-dir=/experiments", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=localerror"]
-
