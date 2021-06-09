@@ -8,7 +8,7 @@ class LocalLossNet(nn.Module):
         if not self.args.backprop:
             return self.layers[-1].parameters()
         else:
-            return nn.Module.parameters(self)
+            return super(LocalLossNet, self).parameters()
 
     def iter_local_loss_layers(self):
         for layer in self.layers:

@@ -128,7 +128,7 @@ class Trainer:
                     string_print += m.print_stats() 
         print(string_print)"""
 
-        return loss_average_local, loss_average_global, error_percent  # , string_print
+        return loss_average_local, loss_average_global, 1-error_percent
 
     def validate(self):
         ''' Run model on validation set '''
@@ -173,7 +173,7 @@ class Trainer:
                     string_print += m.print_stats()
         print(string_print)"""
 
-        return loss_average_local, loss_average, error_percent,
+        return loss_average_local, loss_average, 1-error_percent
 
     def fit(self):
         ''' The main training and testing loop '''
