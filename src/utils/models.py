@@ -1,5 +1,13 @@
+import os
+
+import pandas
+import torch
+import yaml
+from omegaconf import OmegaConf
+
 import models
 from torch import nn
+from .configuration import adjust_cfg, load_experiment_cfg
 
 
 def get_model(cfg, logger=None):
@@ -25,3 +33,23 @@ class ViewLayer(nn.Module):
 
     def forward(self, x):
         return x.view(x.size(0), -1)
+
+
+def find_best_checkpoint_index(train_results_path):
+    results = pandas.read_csv(train_results_path)
+    return results['valid_accuracy'].idxmax()
+
+
+def load_model_params(model, path):
+    params = torch.load(path)
+    model.load_state_dict(params["model_state_dict"])
+
+
+def load_best_model_from_exp_dir(exp_dir):
+    exp_cfg = OmegaConf.create(load_experiment_cfg(os.path.join(exp_dir, ".hydra", "config.yaml")))
+    adjust_cfg(exp_cfg)
+    model = get_model(exp_cfg.model)
+    checkpoint_index = find_best_checkpoint_index(os.path.join(exp_dir, "training_results.csv"))
+    params_path = os.path.join(exp_dir, "checkpoints", f"{checkpoint_index}.pt")
+    load_model_params(model, params_path)
+    return model

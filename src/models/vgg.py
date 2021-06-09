@@ -5,7 +5,7 @@ from operator import mul
 
 from .local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
 from .local_loss_net import LocalLossNet
-from utils.models import ViewLayer
+import utils.models as utils
 
 
 class FullyConnectedNet(LocalLossNet):
@@ -29,7 +29,7 @@ class FullyConnectedNet(LocalLossNet):
         self.dropout = dropout
         self.num_layers = num_layers
         reduce_factor = 1
-        self.layers = nn.ModuleList([ViewLayer()])
+        self.layers = nn.ModuleList([utils.ViewLayer()])
         if num_layers > 0:
             self.layers.extend(
                 [LocalLossBlockLinear(self.args, reduce(mul, input_dim, 1), num_hidden, num_classes, first_layer=True,

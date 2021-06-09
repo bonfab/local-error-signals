@@ -2,7 +2,7 @@ import torch.nn
 from torch import nn
 
 from .local_loss_blocks import LocalLossBlockConv
-from utils.models import calc_conv_out_dim
+import utils.models as utils
 from .local_loss_net import LocalLossNet
 
 
@@ -10,9 +10,9 @@ class AllCNNBlock(LocalLossNet):
 
     def __init__(self, args, input_dim, channel_out, num_classes, kernel_size=3, first_layer=False):
         super().__init__()
-        out_dim1 = calc_conv_out_dim(input_dim[1], kernel_size)
-        out_dim2 = calc_conv_out_dim(out_dim1, kernel_size)
-        out_dim3 = calc_conv_out_dim(out_dim2, kernel_size, stride=2)
+        out_dim1 = utils.calc_conv_out_dim(input_dim[1], kernel_size)
+        out_dim2 = utils.calc_conv_out_dim(out_dim1, kernel_size)
+        out_dim3 = utils.calc_conv_out_dim(out_dim2, kernel_size, stride=2)
         self.out_dim = out_dim3
         self.layers = nn.ModuleList([
             LocalLossBlockConv(args, input_dim[0], channel_out, kernel_size, 1, 0, num_classes, out_dim1, first_layer=first_layer),
@@ -24,7 +24,7 @@ class AllCNNTail(LocalLossNet):
 
     def __init__(self, args, input_dim, num_classes, kernel_size=3):
         super().__init__()
-        out_dim = calc_conv_out_dim(input_dim[1], kernel_size)
+        out_dim = utils.calc_conv_out_dim(input_dim[1], kernel_size)
         self.layers = nn.ModuleList([
             LocalLossBlockConv(args, input_dim[0], input_dim[0], kernel_size, 1, 0, num_classes, out_dim),
             LocalLossBlockConv(args, input_dim[0], input_dim[0], 1, 1, 0, num_classes, out_dim),
