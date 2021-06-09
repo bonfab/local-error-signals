@@ -303,7 +303,6 @@ class LocalLossBlockConv(LocalLossBlock):
                  first_layer=False,
                  dropout=0, bias=None, pre_act=False, post_act=True):
         super().__init__()
-
         self.args = args
         self.no_print_stats = not self.args.print_stats
         self.ch_in = ch_in
