@@ -5,6 +5,7 @@ import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
 
+
 def similarity_matrix(x, no_similarity_std=False):
     ''' Calculate adjusted cosine similarity matrix of size x.size(0) x x.size(0). '''
     if x.dim() == 4:
@@ -12,15 +13,17 @@ def similarity_matrix(x, no_similarity_std=False):
             z = x.view(x.size(0), x.size(1), -1)
             x = z.std(dim=2)
         else:
-            x = x.view(x.size(0),-1)
+            x = x.view(x.size(0), -1)
     xc = x - x.mean(dim=1).unsqueeze(1)
-    xn = xc / (1e-8 + torch.sqrt(torch.sum(xc**2, dim=1))).unsqueeze(1)
-    R = xn.matmul(xn.transpose(1,0)).clamp(-1,1)
+    xn = xc / (1e-8 + torch.sqrt(torch.sum(xc ** 2, dim=1))).unsqueeze(1)
+    R = xn.matmul(xn.transpose(1, 0)).clamp(-1, 1)
     return R
+
 
 class LinearFAFunction(torch.autograd.Function):
     '''Autograd function for linear feedback alignment module.
     '''
+
     @staticmethod
     def forward(context, input, weight, weight_fa, bias=None):
         context.save_for_backward(input, weight, weight_fa, bias)
@@ -89,7 +92,41 @@ class LinearFA(nn.Module):
                + ', out_features=' + str(self.output_features) \
                + ', bias=' + str(self.bias is not None) + ')'
 
-class LocalLossBlockLinear(nn.Module):
+
+class LocalLossBlock(nn.Module):
+
+    def clear_stats(self):
+        if not self.no_print_stats:
+            self.loss_sim = 0.0
+            self.loss_pred = 0.0
+            self.correct = 0
+            self.examples = 0
+
+    def print_stats(self):
+        if not self.args.backprop:
+            stats = '{}, loss_sim={:.4f}, loss_pred={:.4f}, error={:.3f}%, num_examples={}\n'.format(
+                self.encoder,
+                self.loss_sim / self.examples,
+                self.loss_pred / self.examples,
+                100.0 * float(self.examples - self.correct) / self.examples,
+                self.examples)
+            return stats
+        else:
+            return ''
+
+    def set_learning_rate(self, lr):
+        self.lr = lr
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.lr
+
+    def optim_zero_grad(self):
+        self.optimizer.zero_grad()
+
+    def optim_step(self):
+        self.optimizer.step()
+
+
+class LocalLossBlockLinear(LocalLossBlock):
     '''A module containing nn.Linear -> nn.BatchNorm1d -> nn.ReLU -> nn.Dropout
        The block can be trained by backprop or by locally generated error signal based on cross-entropy and/or similarity matching loss.
 
@@ -102,8 +139,9 @@ class LocalLossBlockLinear(nn.Module):
         batchnorm (bool): True if to use batchnorm, if None, read from args.no_batch_norm.
     '''
 
-    def __init__(self, args, num_in, num_out, num_classes, nonlin="relu", first_layer=False, dropout=0, batchnorm=None, print_stats=True):
-        super(LocalLossBlockLinear, self).__init__()
+    def __init__(self, args, num_in, num_out, num_classes, nonlin="relu", first_layer=False, dropout=0, batchnorm=None,
+                 print_stats=True):
+        super().__init__()
 
         self.args = args
         self.no_print_stats = not print_stats
@@ -143,36 +181,6 @@ class LocalLossBlockLinear(nn.Module):
                                         amsgrad=args.optim == 'amsgrad')
 
         self.clear_stats()
-
-    def clear_stats(self):
-        if not self.no_print_stats:
-            self.loss_sim = 0.0
-            self.loss_pred = 0.0
-            self.correct = 0
-            self.examples = 0
-
-    def print_stats(self):
-        if not self.args.backprop:
-            stats = '{}, loss_sim={:.4f}, loss_pred={:.4f}, error={:.3f}%, num_examples={}\n'.format(
-                self.encoder,
-                self.loss_sim / self.examples,
-                self.loss_pred / self.examples,
-                100.0 * float(self.examples - self.correct) / self.examples,
-                self.examples)
-            return stats
-        else:
-            return ''
-
-    def set_learning_rate(self, lr):
-        self.lr = lr
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.lr
-
-    def optim_zero_grad(self):
-        self.optimizer.zero_grad()
-
-    def optim_step(self):
-        self.optimizer.step()
 
     def forward(self, x, y, y_onehot):
         # The linear transformation
@@ -270,7 +278,8 @@ class LocalLossBlockLinear(nn.Module):
 
         return h_return, loss
 
-class LocalLossBlockConv(nn.Module):
+
+class LocalLossBlockConv(LocalLossBlock):
     '''
     A block containing nn.Conv2d -> nn.BatchNorm2d -> nn.ReLU -> nn.Dropou2d
     The block can be trained by backprop or by locally generated error signal based on cross-entropy and/or similarity matching loss.
@@ -290,12 +299,13 @@ class LocalLossBlockConv(nn.Module):
         post_act (bool): True if to apply layer order nn.Conv2d -> nn.BatchNorm2d -> nn.ReLU -> nn.Dropou2d.
     '''
 
-    def __init__(self, args, ch_in, ch_out, kernel_size, stride, padding, num_classes, dim_out, nonlin='relu', first_layer=False,
-                 dropout=0, bias=None, pre_act=False, post_act=True, print_stats=True):
-        super(LocalLossBlockConv, self).__init__()
+    def __init__(self, args, ch_in, ch_out, kernel_size, stride, padding, num_classes, dim_out, nonlin='relu',
+                 first_layer=False,
+                 dropout=0, bias=None, pre_act=False, post_act=True):
+        super().__init__()
 
         self.args = args
-        self.no_print_stats = not print_stats
+        self.no_print_stats = not self.args.print_stats
         self.ch_in = ch_in
         self.ch_out = ch_out
         self.num_classes = num_classes
@@ -358,36 +368,6 @@ class LocalLossBlockConv(nn.Module):
 
         self.clear_stats()
 
-    def clear_stats(self):
-        if not self.no_print_stats:
-            self.loss_sim = 0.0
-            self.loss_pred = 0.0
-            self.correct = 0
-            self.examples = 0
-
-    def print_stats(self):
-        if not self.args.backprop:
-            stats = '{}, loss_sim={:.4f}, loss_pred={:.4f}, error={:.3f}%, num_examples={}\n'.format(
-                self.encoder,
-                self.loss_sim / self.examples,
-                self.loss_pred / self.examples,
-                100.0 * float(self.examples - self.correct) / self.examples,
-                self.examples)
-            return stats
-        else:
-            return ''
-
-    def set_learning_rate(self, lr):
-        self.lr = lr
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.lr
-
-    def optim_zero_grad(self):
-        self.optimizer.zero_grad()
-
-    def optim_step(self):
-        self.optimizer.step()
-
     def forward(self, x, y, y_onehot, x_shortcut=None):
         # If pre-activation, apply batchnorm->nonlin->dropout
         if self.pre_act:
@@ -435,7 +415,7 @@ class LocalLossBlockConv(nn.Module):
                     h_loss = self.conv_loss(h)
                 Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
 
-                # Calculate unsupervised loss
+            # Calculate unsupervised loss
             if self.args.loss_unsup == 'sim':
                 Rx = similarity_matrix(x, self.args.no_similarity_std).detach()
                 loss_unsup = F.mse_loss(Rh, Rx)
