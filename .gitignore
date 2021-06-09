@@ -145,3 +145,4 @@ logs/
 wandb/
 .env
 .autoenv
+theoretical_framework_for_target_propagation/
