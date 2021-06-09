@@ -144,20 +144,6 @@ if __name__ == "__main__":
                                            plots=args.plots,
                                            forward_requires_grad=forward_requires_grad)
                                            
-    allCNNC_dense = DDTPConvAllCNNC_dense(bias=not args.no_bias,
-                                           hidden_activation=args.hidden_activation,
-                                           feedback_activation=args.fb_activation,
-                                           initialization=args.initialization,
-                                           sigma=args.sigma,
-                                           plots=args.plots,
-                                           forward_requires_grad=forward_requires_grad)
-    ConvDDTP = DDTPConvNetwork(bias=not args.no_bias,
-                                           hidden_activation=args.hidden_activation,
-                                           feedback_activation=args.fb_activation,
-                                           initialization=args.initialization,
-                                           sigma=args.sigma,
-                                           plots=args.plots,
-                                           forward_requires_grad=forward_requires_grad)
     
     curdir = os.path.curdir
     out_dir = os.path.join(curdir, "log")
@@ -321,9 +307,9 @@ if __name__ == "__main__":
                                                        num_workers=0)
             val_loader = None
         else:
-            # g_cuda = torch.Generator(device='cuda')
+            g_cuda = torch.Generator(device='cuda')
             trainset, valset = torch.utils.data.random_split(trainset_total,
-                                                             [45000, 5000])
+                                                             [45000, 5000], generator = g_cuda)
             train_loader = torch.utils.data.DataLoader(trainset,
                                                        batch_size=args.batch_size,
                                                        shuffle=True, num_workers=0)
@@ -367,8 +353,6 @@ if __name__ == "__main__":
         # if no error code in finished, put it on 1 to indicate succesful run
         summary['finished'] = 1
         utils.save_summary_dict(args, summary)
-    if writer is not None:
-        writer.close()
 
     if args.save_loss_plot:
         utils.plot_loss(summary, logdir=args.out_dir, logplot=True)
@@ -378,4 +362,3 @@ if __name__ == "__main__":
     with open(filename, 'wb') as f:
         pickle.dump(summary, f)
 
-    return summary
