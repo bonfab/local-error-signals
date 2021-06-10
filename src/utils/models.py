@@ -1,8 +1,7 @@
 import os
 
-import pandas
+import pandas as pd
 import torch
-import yaml
 from omegaconf import OmegaConf
 
 import models
@@ -36,8 +35,8 @@ class ViewLayer(nn.Module):
 
 
 def find_best_checkpoint_index(train_results_path):
-    results = pandas.read_csv(train_results_path)
-    return results['valid_accuracy'].idxmax()
+    results = pd.read_csv(train_results_path)
+    return results['valid_acc'].idxmax()
 
 
 def load_model_params(model, path):

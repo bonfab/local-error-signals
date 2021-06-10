@@ -187,8 +187,8 @@ class Trainer:
             valid_loss_local, valid_loss_global, valid_acc = self.validate()
             self.log_results(epoch, valid_loss_local, valid_loss_global, valid_acc, msg='Validation Run')
             self.csv_logger.info(f'{epoch},'
-                                 f'{train_loss_local},{train_loss_global},{train_acc},'
-                                 f'{valid_loss_local},{valid_loss_global},{valid_acc}')
+                                 f'{train_loss_local},{train_loss_global},{train_acc/100},'
+                                 f'{valid_loss_local},{valid_loss_global},{valid_acc/100}')
             self.save_checkpoint(epoch, self.model, self.optimizer)
 
     def save_checkpoint(self, epoch, model, optimizer):

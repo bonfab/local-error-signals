@@ -1,6 +1,7 @@
 import hydra
 from omegaconf import OmegaConf
 
+from utils.eval import make_acc_plots
 from train import Trainer
 from utils.logging import get_logger, str_to_logging_level
 from utils.data import get_datasets
@@ -18,6 +19,7 @@ def main(cfg: OmegaConf):
     model = get_model(cfg.model, logger)
     trainer = Trainer(cfg.train, model, train_set, test_set, logger)
     trainer.fit()
+    make_acc_plots("./training_results.csv")
 
 
 if __name__ == "__main__":

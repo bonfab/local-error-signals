@@ -18,8 +18,8 @@ def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
 
 
 def get_csv_logger(name="csv", file_path='./results.csv', header='epoch,'
-                                                                 'train_loss_local,train_loss_global,train_accuracy,'
-                                                                 'valid_loss_local,valid_loss_global,valid_accuracy'):
+                                                                 'train_loss_local,train_loss_global,train_acc,'
+                                                                 'valid_loss_local,valid_loss_global,valid_acc'):
     logger = logging.getLogger(name)
     logger.propagate = False
     logger.setLevel(logging.DEBUG)
