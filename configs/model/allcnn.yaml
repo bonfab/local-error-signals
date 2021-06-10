@@ -1,10 +1,11 @@
 # @package _group_
 name: allcnn
 loss:
-  no_batch_norm: True
+  no_batch_norm: False
   backprop: False
   loss_sup: predsim
   bio: False
+  no_detach: False
   dim_in_decoder: 4096
   alpha: 0
   beta: 0.99

@@ -35,6 +35,7 @@ class Trainer:
                                         amsgrad=cfg.optim == 'amsgrad')
         else:
             raise ValueError(f'Unknown optimizer {cfg.optim}')
+        self.model.set_learning_rate(cfg.lr)
 
         if cfg.gpus:
             self.model.cuda()

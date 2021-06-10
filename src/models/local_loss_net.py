@@ -35,5 +35,6 @@ class LocalLossNet(nn.Module):
                 total_loss += loss
             else:
                 x = layer(x)
+            #print(x.shape)
 
         return x, total_loss

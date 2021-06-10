@@ -8,6 +8,7 @@ loss:
   backprop: False
   loss_sup: predsim
   bio: False
+  no_detach: False
   dim_in_decoder: 4096
   alpha: 0
   beta: 0.99
