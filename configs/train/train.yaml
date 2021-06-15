@@ -1,10 +1,11 @@
 # @package _group_
-gpu: 0
+gpus: 1
 lr: 0.001
-epochs: 3
-batch_size: 64
+epochs: 50
+batch_size: 128
 optim: adam
 weight_decay: 0
 progress_bar: True
+data_loader_workers: 3
 checkpointing: True
 checkpoint_dir: checkpoints

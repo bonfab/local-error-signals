@@ -1,8 +1,5 @@
 # @package _group_
-name: vgg6a
-dropout: 0
-num_layers: 1
-num_hidden: 1024
+name: allcnn
 loss:
   no_batch_norm: False
   backprop: False

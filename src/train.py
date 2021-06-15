@@ -35,6 +35,7 @@ class Trainer:
                                         amsgrad=cfg.optim == 'amsgrad')
         else:
             raise ValueError(f'Unknown optimizer {cfg.optim}')
+        self.model.set_learning_rate(cfg.lr)
 
         if cfg.gpus:
             self.model.cuda()
@@ -48,7 +49,7 @@ class Trainer:
             data_set,
             batch_size=self.cfg.batch_size,
             shuffle=True,
-            num_workers=0,
+            num_workers=self.cfg.data_loader_workers,
             **kwargs)
 
     def trainiter(self):
@@ -128,7 +129,7 @@ class Trainer:
                     string_print += m.print_stats() 
         print(string_print)"""
 
-        return loss_average_local, loss_average_global, error_percent  # , string_print
+        return loss_average_local, loss_average_global, 100-error_percent
 
     def validate(self):
         ''' Run model on validation set '''
@@ -173,7 +174,7 @@ class Trainer:
                     string_print += m.print_stats()
         print(string_print)"""
 
-        return loss_average_local, loss_average, error_percent,
+        return loss_average_local, loss_average, 100-error_percent
 
     def fit(self):
         ''' The main training and testing loop '''
@@ -182,13 +183,13 @@ class Trainer:
         # TODO: add checkpoint loading
         for epoch in range(self.cfg.epochs):
             # Train and test
-            train_loss_local, train_loss_global, train_error = self.trainiter()
-            self.log_results(epoch, train_loss_local, train_loss_global, train_error, msg='Train Run')
-            valid_loss_local, valid_loss_global, valid_error = self.validate()
-            self.log_results(epoch, valid_loss_local, valid_loss_global, valid_error, msg='Validation Run')
+            train_loss_local, train_loss_global, train_acc = self.trainiter()
+            self.log_results(epoch, train_loss_local, train_loss_global, train_acc, msg='Train Run')
+            valid_loss_local, valid_loss_global, valid_acc = self.validate()
+            self.log_results(epoch, valid_loss_local, valid_loss_global, valid_acc, msg='Validation Run')
             self.csv_logger.info(f'{epoch},'
-                                 f'{train_loss_local},{train_loss_global},{train_error},'
-                                 f'{valid_loss_local},{valid_loss_global},{valid_error}')
+                                 f'{train_loss_local},{train_loss_global},{train_acc/100},'
+                                 f'{valid_loss_local},{valid_loss_global},{valid_acc/100}')
             self.save_checkpoint(epoch, self.model, self.optimizer)
 
     def save_checkpoint(self, epoch, model, optimizer):
@@ -206,6 +207,6 @@ class Trainer:
                          f'epoch: {epoch}\n\t\t'
                          f'local loss: {local_loss:.4f}\n\t\t'
                          f'global loss: {global_loss:.4f}\n\t\t'
-                         f'accuracy: {accuracy:.3f}\n\t\t'
+                         f'accuracy: {accuracy:.3f}%\n\t\t'
                          f'mem: {torch.cuda.memory_allocated() / 1e6:.0f} MiB\n\t\t'
                          f'max mem: {torch.cuda.max_memory_allocated() / 1e6:.0f} MiB')
