@@ -68,7 +68,7 @@ class DDTPConvAllCNNC(nn.Module):
                            feedback_activation=feedback_activation)
         
         l7 = DDTPConvLayer(192, 192, (3, 3), 10, [192, 8, 8],
-                           stride=1, padding=1, dilation=1, groups=1,
+                           stride=1, padding=0, dilation=1, groups=1,
                            bias=bias, padding_mode='zeros',
                            initialization=initialization,
                            pool_type='max', pool_kernel_size=(1,1),
@@ -87,7 +87,7 @@ class DDTPConvAllCNNC(nn.Module):
                            stride=1, padding=0, dilation=1, groups=1,
                            bias=bias, padding_mode='zeros',
                            initialization=initialization,
-                           pool_type='max', pool_kernel_size=(8,8),
+                           pool_type='max', pool_kernel_size=(6,6),
                            pool_stride=(1, 1), pool_padding=0, pool_dilation=1,
                            forward_activation=hidden_activation,
                            feedback_activation=feedback_activation)
