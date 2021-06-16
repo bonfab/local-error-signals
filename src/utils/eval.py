@@ -14,3 +14,4 @@ def make_acc_plots(path_to_csv="./training_results.csv"):
     fig.savefig(
         os.path.join(os.path.split(path_to_csv)[0], "acc_plot.png")
     )
+    fig.clf()
