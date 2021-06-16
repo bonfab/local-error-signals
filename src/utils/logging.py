@@ -2,7 +2,6 @@ import logging
 
 
 def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
-
     logger = logging.getLogger(name)
     logger.setLevel(level)
     """
@@ -44,3 +43,8 @@ def str_to_logging_level(str):
         return logging.critical()
 
     raise ValueError(f'logging level {str} not known')
+
+
+def shutdown_logging(logger):
+    logger.handlers.clear()
+    logging.shutdown()
