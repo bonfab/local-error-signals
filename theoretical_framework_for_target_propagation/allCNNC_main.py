@@ -33,7 +33,7 @@ args =  {'dataset': 'cifar10',
      'num_train': 1000,
      'num_test': 1000,
      'num_val': 1000,
-     'epochs': 10,
+     'epochs': 50,
      'batch_size': 128,
      'lr': '0.1',
      'lr_fb': '0.1', # learning rate for feedback parameters
