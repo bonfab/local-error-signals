@@ -3,7 +3,7 @@ from omegaconf import OmegaConf
 
 from utils.eval import make_acc_plots
 from train import Trainer
-from utils.logging import get_logger, str_to_logging_level
+from utils.logging import get_logger, str_to_logging_level, shutdown_logging
 from utils.data import get_datasets
 from utils.models import get_model
 from utils.configuration import adjust_cfg
@@ -20,7 +20,7 @@ def main(cfg: OmegaConf):
     trainer = Trainer(cfg.train, model, train_set, test_set, logger)
     trainer.fit()
     make_acc_plots("./training_results.csv")
-
+    shutdown_logging(logger)
 
 if __name__ == "__main__":
     main()

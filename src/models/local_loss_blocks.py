@@ -457,6 +457,7 @@ class LocalLossBlockConv(LocalLossBlock):
         if self.post_act and self.dropout_p > 0:
             h_return = self.dropout(h_return)
 
+        Rh = 0
         # Calculate local loss and update weights
         if (not self.no_print_stats or self.training) and not self.args.backprop:
             # Add batchnorm and nonlinearity if not done already
