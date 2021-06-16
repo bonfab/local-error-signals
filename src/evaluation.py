@@ -98,7 +98,7 @@ class Evaluation():
         print('Load the weights...')
 
 
-        self.model.load_state_dict(torch.load(self.model_path))
+        #self.model.load_state_dict(torch.load(self.model_path))
 
         running_loss = 0.0
         total = 0.0
