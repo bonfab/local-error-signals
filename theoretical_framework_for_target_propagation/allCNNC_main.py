@@ -115,7 +115,7 @@ args =  {'dataset': 'cifar10',
      'output_space_plot_layer_idx': None,
      'output_space_plot_bp': False,
      'save_weights': True,
-     'load_weights': True,
+     'load_weights': False,
      'gn_damping_hpsearch': False,
      'save_nullspace_norm_ratio': False
      }
