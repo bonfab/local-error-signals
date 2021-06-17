@@ -225,8 +225,9 @@ class DDTPConvNetwork(nn.Module):
         parameterlist = []
         for layer in self.layers:
             parameterlist.append(layer.weights)
-            if layer.bias is not None:
-                parameterlist.append(layer.bias)
+            #if layer.bias is not None:
+            # now always saves also the biases
+            parameterlist.append(layer.bias)
         return parameterlist
 
     def get_feedback_parameter_list(self):
