@@ -1,3 +1,6 @@
+import random
+import numpy as np
+import torch
 import yaml
 
 
@@ -12,3 +15,9 @@ def adjust_cfg(cfg):
 def load_experiment_cfg(path):
     with open(path, 'r') as file:
         return yaml.safe_load(file)
+
+
+def set_seed(seed):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
