@@ -1,6 +1,7 @@
 import logging
 import os
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -41,15 +42,17 @@ class Trainer:
             self.model.cuda()
 
         self.train_loader = self.get_loader(train_set)
-        self.valid_loader = self.get_loader(valid_set)
+        self.valid_loader = self.get_loader(valid_set, shuffle=False)
 
-    def get_loader(self, data_set):
+    def get_loader(self, data_set, shuffle=True):
         kwargs = {'pin_memory': True} if self.cfg.gpus else {}
         return torch.utils.data.DataLoader(
             data_set,
             batch_size=self.cfg.batch_size,
-            shuffle=True,
+            shuffle=shuffle,
             num_workers=self.cfg.data_loader_workers,
+            worker_init_fn=lambda worker_id: np.random.seed(
+                 self.cfg.seed + worker_id),
             **kwargs)
 
     def trainiter(self):

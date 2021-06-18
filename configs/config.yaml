@@ -1,7 +1,7 @@
 # default training configuration
 defaults:
     - train: train.yaml
-    - model: vgg.yaml
+    - model: allcnn.yaml
     - dataset: cifar10.yaml
     #- log: null  # set logger here or use command line (e.g. `python run.py logger=wandb`)
 
