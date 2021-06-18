@@ -39,16 +39,24 @@ def find_best_checkpoint_index(train_results_path):
     return results['valid_acc'].idxmax()
 
 
-def load_model_params(model, path):
-    params = torch.load(path)
+def load_model_params(model, path, cpu):
+    if cpu:
+        params = torch.load(path, map_location=torch.device('cpu'))
+    else:
+        params = torch.load(path, map_location=torch.device('gpu'))
+
     model.load_state_dict(params["model_state_dict"])
 
 
-def load_best_model_from_exp_dir(exp_dir):
+def load_best_model_from_exp_dir(exp_dir, cpu=not torch.cuda.is_available()):
     exp_cfg = OmegaConf.create(load_experiment_cfg(os.path.join(exp_dir, ".hydra", "config.yaml")))
     adjust_cfg(exp_cfg)
+    if cpu:
+        exp_cfg.train.gpus = 0
+        exp_cfg.model.loss.gpus = 0
+    print(exp_cfg)
     model = get_model(exp_cfg.model)
     checkpoint_index = find_best_checkpoint_index(os.path.join(exp_dir, "training_results.csv"))
     params_path = os.path.join(exp_dir, "checkpoints", f"{checkpoint_index}.pt")
-    load_model_params(model, params_path)
+    load_model_params(model, params_path, not exp_cfg.train.gpus)
     return model
