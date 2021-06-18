@@ -99,7 +99,7 @@ args =  {'dataset': 'cifar10',
      'multiple_hpsearch': False,
      'double_precision': False,
      'evaluate': True,
-     'out_dir': 'logs/acnnc_100',
+     'out_dir': 'logs/acnnc_1000_2_weights',
      'save_logs': False,
      'save_BP_angle': False,
      'save_GN_angle': False,
@@ -114,11 +114,46 @@ args =  {'dataset': 'cifar10',
      'output_space_plot': False,
      'output_space_plot_layer_idx': None,
      'output_space_plot_bp': False,
-     'save_weights': False,
+     'save_weights': True,
      'load_weights': False,
      'gn_damping_hpsearch': False,
      'save_nullspace_norm_ratio': False
      }
+
+def load_network_w_weights(args, run_dir = "results/acnnc_1000_weights"):
+    
+    # function to load the AllCNNC Network according to the definition and load presaved weights
+    from torchsummary import summary
+    if type(args) != argparse.Namespace:
+        args = argparse.Namespace(**args)
+    forward_requires_grad = args.save_BP_angle or args.save_GN_angle or\
+                            args.save_GN_activations_angle or \
+                            args.save_BP_activations_angle or \
+                            args.save_GNT_angle or \
+                            args.network_type in ['GN', 'GN2'] or \
+                            args.output_space_plot_bp or \
+                            args.gn_damping_hpsearch or \
+                            args.save_nullspace_norm_ratio
+    net = DDTPConvAllCNNC(bias=not args.no_bias,
+                                        hidden_activation=args.hidden_activation,
+                                        feedback_activation=args.fb_activation,
+                                        initialization=args.initialization,
+                                        sigma=args.sigma,
+                                        plots=args.plots,
+                                        forward_requires_grad=forward_requires_grad)
+
+    
+    filename = os.path.normpath(os.path.join(run_dir, 'weights.pickle'))
+    forward_parameters_loaded = pickle.load( open(filename, 'rb'))
+    if len(net.layers) != len(forward_parameters_loaded)/2:
+        print("the number of weights does not fit")
+        return 
+    for i in range(len(net.layers)):
+        net.layers[i]._weights = forward_parameters_loaded[i*2]
+        net.layers[i]._bias = forward_parameters_loaded[(i*2) + 1]
+    print(summary(net, (3,32,32)))
+    return net
+
 
 if __name__ == "__main__":
     args = argparse.Namespace(**args)
@@ -340,6 +375,7 @@ if __name__ == "__main__":
                         test_loader=val_loader,
                         summary=summary,
                         val_loader=val_loader)
+    
     if (args.plots is not None and args.network_type != 'BP'):
         summary['bp_activation_angles'] = net.bp_activation_angles
         summary['gn_activation_angles'] = net.gn_activation_angles
