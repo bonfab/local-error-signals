@@ -96,6 +96,16 @@ class LinearFA(nn.Module):
 
 class LocalLossBlock(nn.Module):
 
+    def __init__(self):
+        super().__init__()
+        self.local_eval = False
+
+    def local_loss_eval(self):
+        self.local_eval = True
+
+    def local_loss_train(self):
+        self.local_eval = False
+
     def clear_stats(self):
         if not self.no_print_stats:
             self.loss_sim = 0.0
@@ -250,7 +260,10 @@ class LocalLossBlockLinear(LocalLossBlock):
 
         return loss_sup
 
-    def forward(self, x, y, y_onehot):
+    def forward(self, x, y=None, y_onehot=None):
+
+        assert not (y is None or y_onehot is None) or self.local_eval
+
         # The linear transformation
         h = self.encoder(x)
 
@@ -264,34 +277,38 @@ class LocalLossBlockLinear(LocalLossBlock):
         if self.dropout_p > 0:
             h_return = self.dropout(h_return)
 
-        # Calculate local loss and update weights
-        if (self.training or not self.no_print_stats) and not self.args.backprop:
-            # Calculate hidden layer similarity matrix
-            if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
-                if self.args.bio:
-                    h_loss = h
-                else:
-                    h_loss = self.linear_loss(h)
-                Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
+        if not self.local_eval:
+            # Calculate local loss and update weights
+            if (self.training or not self.no_print_stats) and not self.args.backprop:
+                # Calculate hidden layer similarity matrix
+                if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
+                    if self.args.bio:
+                        h_loss = h
+                    else:
+                        h_loss = self.linear_loss(h)
+                    Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
 
-            # Combine unsupervised and supervised loss
-            loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
+                # Combine unsupervised and supervised loss
+                loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
 
-            # Single-step back-propagation
-            if self.training:
-                loss.backward(retain_graph=self.args.no_detach)
+                # Single-step back-propagation
+                if self.training:
+                    loss.backward(retain_graph=self.args.no_detach)
 
-            # Update weights in this layer and detatch computational graph
-            if self.training and not self.args.no_detach:
-                self.optimizer.step()
-                self.optimizer.zero_grad()
-                h_return.detach_()
+                # Update weights in this layer and detatch computational graph
+                if self.training and not self.args.no_detach:
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
+                    h_return.detach_()
 
-            loss = loss.item()
+                loss = loss.item()
+            else:
+                loss = 0.0
+
+            return h_return, loss
+
         else:
-            loss = 0.0
-
-        return h_return, loss
+            return h_return
 
 
 class LocalLossBlockConv(LocalLossBlock):
@@ -428,7 +445,10 @@ class LocalLossBlockConv(LocalLossBlock):
 
         return loss_sup
 
-    def forward(self, x, y, y_onehot, x_shortcut=None):
+    def forward(self, x, y=None, y_onehot=None, x_shortcut=None):
+
+        assert not (y is None or y_onehot is None) or self.local_eval
+
         # If pre-activation, apply batchnorm->nonlin->dropout
         if self.pre_act:
             if not self.args.no_batch_norm:
@@ -457,40 +477,44 @@ class LocalLossBlockConv(LocalLossBlock):
         if self.post_act and self.dropout_p > 0:
             h_return = self.dropout(h_return)
 
-        Rh = 0
-        # Calculate local loss and update weights
-        if (not self.no_print_stats or self.training) and not self.args.backprop:
-            # Add batchnorm and nonlinearity if not done already
-            if not self.post_act:
-                if not self.args.no_batch_norm:
-                    h = self.bn(h)
-                h = self.nonlin(h)
+        if not self.local_eval:
+            Rh = 0
+            # Calculate local loss and update weights
+            if (not self.no_print_stats or self.training) and not self.args.backprop:
+                # Add batchnorm and nonlinearity if not done already
+                if not self.post_act:
+                    if not self.args.no_batch_norm:
+                        h = self.bn(h)
+                    h = self.nonlin(h)
 
-            # Calculate hidden feature similarity matrix
-            if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
-                if self.args.bio:
-                    h_loss = h
-                    if self.avg_pool is not None:
-                        h_loss = self.avg_pool(h_loss)
-                else:
-                    h_loss = self.conv_loss(h)
-                Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
+                # Calculate hidden feature similarity matrix
+                if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
+                    if self.args.bio:
+                        h_loss = h
+                        if self.avg_pool is not None:
+                            h_loss = self.avg_pool(h_loss)
+                    else:
+                        h_loss = self.conv_loss(h)
+                    Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
 
-            # Combine unsupervised and supervised loss
-            loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
+                # Combine unsupervised and supervised loss
+                loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
 
-            # Single-step back-propagation
-            if self.training:
-                loss.backward(retain_graph=self.args.no_detach)
+                # Single-step back-propagation
+                if self.training:
+                    loss.backward(retain_graph=self.args.no_detach)
 
-            # Update weights in this layer and detach computational graph
-            if self.training and not self.args.no_detach:
-                self.optimizer.step()
-                self.optimizer.zero_grad()
-                h_return.detach_()
+                # Update weights in this layer and detach computational graph
+                if self.training and not self.args.no_detach:
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
+                    h_return.detach_()
 
-            loss = loss.item()
+                loss = loss.item()
+            else:
+                loss = 0.0
+
+            return h_return, loss
+
         else:
-            loss = 0.0
-
-        return h_return, loss
+            return h_return
