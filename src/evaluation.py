@@ -1,6 +1,8 @@
+from omegaconf import OmegaConf
+
 from models.local_loss_net import LocalLossNet
 from models.local_loss_blocks import LocalLossBlock
-from utils.data import to_one_hot
+from utils.data import to_one_hot, get_datasets
 from utils.models import load_best_model_from_exp_dir
 
 import numpy as np
@@ -39,21 +41,15 @@ class Evaluation():
 
         self.batch_size = 100
 
-        self.trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                                     download=True, transform=self.transform)
+        self.trainset, self.testset = get_datasets(OmegaConf.create({'name': 'CIFAR-10'}), '../data')
         self.trainloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.batch_size,
                                                        shuffle=True, num_workers=2)
 
-        self.testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                                    download=True, transform=self.transform)
         self.testloader = torch.utils.data.DataLoader(self.testset, batch_size=self.batch_size,
                                                       shuffle=False, num_workers=2)
 
         self.classes = ('plane', 'car', 'bird', 'cat',
                         'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
 
     def plot_ide(self, ide_layers):
 
@@ -153,7 +149,7 @@ class Evaluation():
 
                 running_loss = 0.0
 
-                return self.plot(ide_layers)
+                return self.plot_ide(ide_layers)
 
         print('Finished evaluation')
 
