@@ -55,13 +55,14 @@ class Evaluation():
 
     def plot_ide(self, ide_layers):
 
+        print(ide_layers)
         label = 'Intrinsic Dimension'
         xs = []
         ys = []
         for name, value in ide_layers.items():
-            if "conv" in name:
-                xs.append(name)
-                ys.append(value)
+            #if "conv" in name:
+            xs.append(name)
+            ys.append(value)
 
         fig, ax = plt.subplots()
 
@@ -141,7 +142,8 @@ class Evaluation():
                     handle.remove()
 
                 for name, acts in activations.items():
-                    mean, _ = id.computeID(acts)
+                    mean, _ = id.computeID(acts, verbose=False)
+                    print(mean)
                     ide_layers[name[2]] += mean
                     ide_layers[name[2]] = ide_layers[name[2]] / 2
                     # rsa_layers[name[2]] = (rsa.correlation_matrix(acts))

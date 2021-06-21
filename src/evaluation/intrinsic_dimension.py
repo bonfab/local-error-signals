@@ -70,7 +70,9 @@ def estimate(X, sort=True, fraction=0.9, verbose=False):
     good = np.setdiff1d(good, np.array(degeneracies))
 
     if verbose:
-        print('Fraction good points: {}'.format(good.shape[0] / Y.shape[0]))
+        print('Found {} good points out of {}, fraction: {}'.format(good.shape[0],
+                                                                    Y.shape[0],
+                                                                    good.shape[0] / Y.shape[0]))
 
     k1 = k1[good]
     k2 = k2[good]
@@ -135,7 +137,8 @@ def computeID(features, nres=1, fraction=1.0, fraction_linear_regr=1.0, verbose=
     nres: number of resamplings for error estimation
     fraction: fraction of data resampling for error estimation
     '''
-    features = np.reshape(features, (100,-1))
+
+    features = np.reshape(features, (100, -1))
     ids = []
     n = int(np.round(features.shape[0] * fraction))
     dist = squareform(pdist(features, dist))
@@ -151,6 +154,7 @@ def computeID(features, nres=1, fraction=1.0, fraction_linear_regr=1.0, verbose=
 
 
 def computeIDfast(features, nres=1, fraction=1.0, fraction_linear_regr=1.0, verbose=False, dist='euclidean'):
+
     assert dist in ('euclidean', 'manhattan'), "Invalid distance. Change code to allow 'precomputed' metric."
     if dist == 'manhattan':
         p = 1
