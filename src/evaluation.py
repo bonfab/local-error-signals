@@ -51,6 +51,8 @@ class Evaluation():
         self.classes = ('plane', 'car', 'bird', 'cat',
                         'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
+        self.criterion = nn.CrossEntropyLoss()
+
     def plot_ide(self, ide_layers):
 
         label = 'Intrinsic Dimension'
