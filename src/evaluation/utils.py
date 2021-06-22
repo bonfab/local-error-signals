@@ -7,7 +7,8 @@ from functools import partial
 from sklearn.manifold import MDS
 from sklearn.preprocessing import KernelCenterer
 from sklearn.metrics.pairwise import euclidean_distances
-#from umap import UMAP
+
+# from umap import UMAP
 
 ActivationKind = collections.namedtuple(
     'ActivationKind', ['model_name', 'data_name', 'layer_name', 'epoch'])
@@ -24,9 +25,10 @@ class TrackingFlag():
 def activations_labels():
     return collections.defaultdict(list)
 
+
 def track_activations_labels(activations_labels, targets, tf):
     act_kind = ActivationKind(tf.model_name, tf.data_name, None, tf.epoch)
-    
+
     if not isinstance(targets, list):
         targets = [targets]
 
@@ -68,7 +70,7 @@ def track_activations(named_modules, tf, differentiable=False):
 
 
 def track_sample_wise_grads(named_modules, tf):
-    pass # autograd_hacks.add_hooks_from_list(named_modules)
+    pass  # autograd_hacks.add_hooks_from_list(named_modules)
 
 
 def flatten_activations(activations):
@@ -108,7 +110,6 @@ def separate_data_names(computed_metric):
 
 
 def matrix_of_dist(dist_fn, features):
-
     if isinstance(features, dict) and isinstance(
             list(features.keys())[0], str):
         mat_of_dist_dict = {}
@@ -129,7 +130,7 @@ def repr_dist_embedding(repr_dist, embedding='mds', specific_mds_dimensions=[0, 
             eigvals = eigvals[::-1]
             print(
                 'Proportion of variance explained by first, second, (third) and both (, all three) dimension(s): ({}, {}, ({}) = {}, ({}))'
-                .format(
+                    .format(
                     np.sum(eigvals[0]) / np.sum(eigvals),
                     np.sum(eigvals[1]) / np.sum(eigvals),
                     np.sum(eigvals[2]) / np.sum(eigvals),
@@ -171,7 +172,7 @@ def repr_dist_embedding(repr_dist, embedding='mds', specific_mds_dimensions=[0, 
                 meanrelerr = np.mean(np.abs((repr_dist - edists) / (repr_dist + 1e-9)))
                 print("meanrelerr:", meanrelerr)
 
-                #Eigenspectrum plot
+                # Eigenspectrum plot
                 # plt.plot(eigvals)
                 # plt.show()
 
@@ -190,7 +191,7 @@ def repr_dist_embedding(repr_dist, embedding='mds', specific_mds_dimensions=[0, 
             mdm_transformed_dict[data_name] = (inner_repr_dist[0], repr_dist_embedding_(inner_repr_dist[1], embedding))
         return mdm_transformed_dict
 
-    return repr_dist_embedding_(repr_dist,embedding)
+    return repr_dist_embedding_(repr_dist, embedding)
 
 
 def update(d, u):
