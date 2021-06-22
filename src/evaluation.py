@@ -117,15 +117,20 @@ class Evaluation():
 
         print('Starting evaluation')
 
+        if isinstance(self.model, LocalLossNet):
+            named_modules = self.model.get_base_inference_layers()
+        else:
+            named_modules = list(self.model.named_modules())[1:]
+
         trackingflag = utils.TrackingFlag(True, self.model_name, None, None)
-        for name in list(self.model.named_modules())[1:]:
+        for name in named_modules:
             ide_layers[name[0]] = 0.
             rsa_layers[name[0]] = 0.
 
         with torch.no_grad():
             for i, data in enumerate(self.trainloader, 0):
 
-                activations_, handles = utils.track_activations(list(self.model.named_modules())[1:], trackingflag)
+                activations_, handles = utils.track_activations(named_modules, trackingflag)
 
                 inputs, labels = data
                 outputs = self.model(inputs)
@@ -143,7 +148,6 @@ class Evaluation():
 
                 for name, acts in activations.items():
                     mean, _ = id.computeID(acts, verbose=False)
-                    print(mean)
                     ide_layers[name[2]] += mean
                     ide_layers[name[2]] = ide_layers[name[2]] / 2
                     # rsa_layers[name[2]] = (rsa.correlation_matrix(acts))
