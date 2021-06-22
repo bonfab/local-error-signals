@@ -138,7 +138,8 @@ def computeID(features, nres=1, fraction=1.0, fraction_linear_regr=1.0, verbose=
     fraction: fraction of data resampling for error estimation
     '''
 
-    features = np.reshape(features, (100, -1))
+    batch_size = features.shape[0]
+    features = np.reshape(features, (batch_size, -1))
     ids = []
     n = int(np.round(features.shape[0] * fraction))
     dist = squareform(pdist(features, dist))

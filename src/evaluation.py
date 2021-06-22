@@ -2,11 +2,13 @@ from omegaconf import OmegaConf
 
 from models.local_loss_net import LocalLossNet
 from models.local_loss_blocks import LocalLossBlock
-from utils.data import to_one_hot, get_datasets
+from src.utils.configuration import set_seed
+from utils.data import get_datasets
 from utils.models import load_best_model_from_exp_dir
 
 import numpy as np
 import torch
+import pandas as pd
 import torchvision
 from torchvision import transforms
 from torch import nn, optim
@@ -17,50 +19,42 @@ import evaluation.intrinsic_dimension as id
 import evaluation.rsa as rsa
 import evaluation.utils as utils
 import evaluation.logs as logs
-
-
 # import wandb
 
 
-class Evaluation():
+class Evaluation:
 
-    def __init__(self, model_name, model, model_path, num_classes=10):
+    def __init__(self, cfg, model, data_set):
 
-        self.model_name = model_name
+        self.cfg = cfg
         self.model = model
         self.model.eval()
         if isinstance(self.model, LocalLossNet) or isinstance(self.model, LocalLossBlock):
             self.model.local_loss_eval()
 
-        self.model_path = model_path
-        self.num_classes = num_classes
+        self.num_classes = cfg.num_classes
+        self.batch_size = cfg.batch_size
 
-        self.transform = transforms.Compose(
-            [transforms.ToTensor(),
-             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-        self.batch_size = 100
-
-        self.trainset, self.testset = get_datasets(OmegaConf.create({'name': 'CIFAR-10'}), '../data')
-        self.trainloader = torch.utils.data.DataLoader(self.trainset, batch_size=self.batch_size,
-                                                       shuffle=True, num_workers=2)
-
-        self.testloader = torch.utils.data.DataLoader(self.testset, batch_size=self.batch_size,
-                                                      shuffle=False, num_workers=2)
+        self.data_set = data_set
+        self.data_loader = torch.utils.data.DataLoader(self.data_set, batch_size=self.batch_size,
+                                                       shuffle=True, num_workers=cfg.data_loader_workers,
+                                                       worker_init_fn=lambda worker_id: np.random.seed(
+                                                           self.cfg.seed + worker_id)
+                                                       )
 
         self.classes = ('plane', 'car', 'bird', 'cat',
-                        'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+                        'deer', 'dog', 'frog', 'horse',
+                        'ship', 'truck')
 
         self.criterion = nn.CrossEntropyLoss()
 
     def plot_ide(self, ide_layers):
 
-        print(ide_layers)
         label = 'Intrinsic Dimension'
         xs = []
         ys = []
         for name, value in ide_layers.items():
-            #if "conv" in name:
+            # if "conv" in name:
             xs.append(name)
             ys.append(value)
 
@@ -100,6 +94,8 @@ class Evaluation():
 
     def evaluate(self):
 
+        set_seed(self.cfg.seed)
+
         print('Load the weights...')
 
         # self.model.load_state_dict(torch.load(self.model_path))
@@ -122,13 +118,13 @@ class Evaluation():
         else:
             named_modules = list(self.model.named_modules())[1:]
 
-        trackingflag = utils.TrackingFlag(True, self.model_name, None, None)
+        trackingflag = utils.TrackingFlag(True, None, None, None)
         for name in named_modules:
             ide_layers[name[0]] = 0.
             rsa_layers[name[0]] = 0.
 
         with torch.no_grad():
-            for i, data in enumerate(self.trainloader, 0):
+            for i, data in enumerate(self.data_loader, 0):
 
                 activations_, handles = utils.track_activations(named_modules, trackingflag)
 
@@ -162,8 +158,21 @@ class Evaluation():
         print('Finished evaluation')
 
 
-model = load_best_model_from_exp_dir("../2021-06-18_12-50-30/3")
+if __name__ == "__main__":
+    cfg = OmegaConf.create({
+        "data": {
+            "name": "CIFAR-10"
+        },
+        "model_dir": "../2021-06-18_12-50-30/3",
+        "batch_size": 100,
+        "num_classes": 10,
+        "seed": 1234,
+        "data_loader_workers": 3
+    })
 
-agent = Evaluation(model_name="AllCNN-normal", model=model, model_path='./cifar_net_15.pth')
+    train_set, _ = get_datasets(cfg.data, "../data")
+    model = load_best_model_from_exp_dir("../2021-06-18_12-50-30/3")
 
-agent.evaluate()
+    agent = Evaluation(cfg, model=model, data_set=train_set)
+
+    agent.evaluate()
