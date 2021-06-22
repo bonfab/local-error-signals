@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from omegaconf import OmegaConf
 
 from models.local_loss_net import LocalLossNet
@@ -104,10 +106,10 @@ class Evaluation:
         total = 0.0
         correct = 0.0
 
-        activations = {}
-        ide_layers = {}
-        input_rdms = {}
-        rsa_layers = {}
+        activations = OrderedDict()
+        ide_layers = OrderedDict()
+        input_rdms = OrderedDict()
+        rsa_layers = OrderedDict()
 
         # wandb.init(entity="NI-Project", project="local-error")
 
@@ -153,9 +155,18 @@ class Evaluation:
 
                 running_loss = 0.0
 
-                return self.plot_ide(ide_layers)
+                ide_layers_df = pd.DataFrame({
+                    'layer': ide_layers.keys(),
+                    'dimension': ide_layers.values()
+                })
+                ide_layers_df.to_csv('./internal_dimensions.csv', index=False)
 
-        print('Finished evaluation')
+                print('Finished evaluation')
+
+                if self.cfg.plot:
+                    self.plot_ide(ide_layers)
+
+                return
 
 
 if __name__ == "__main__":
@@ -167,7 +178,8 @@ if __name__ == "__main__":
         "batch_size": 100,
         "num_classes": 10,
         "seed": 1234,
-        "data_loader_workers": 3
+        "data_loader_workers": 3,
+        "plot": True
     })
 
     train_set, _ = get_datasets(cfg.data, "../data")
