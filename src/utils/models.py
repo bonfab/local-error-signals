@@ -43,7 +43,7 @@ def load_model_params(model, path, cpu):
     if cpu:
         params = torch.load(path, map_location=torch.device('cpu'))
     else:
-        params = torch.load(path, map_location=torch.device('gpu'))
+        params = torch.load(path, map_location=torch.device('cuda'))
 
     model.load_state_dict(params["model_state_dict"])
 
