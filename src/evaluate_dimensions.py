@@ -4,7 +4,7 @@ from omegaconf import OmegaConf
 
 from models.local_loss_net import LocalLossNet
 from models.local_loss_blocks import LocalLossBlock
-from src.utils.configuration import set_seed
+from utils.configuration import set_seed
 from utils.data import get_datasets
 from utils.models import load_best_model_from_exp_dir
 
