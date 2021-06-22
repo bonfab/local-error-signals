@@ -15,6 +15,7 @@ import torchvision
 from torchvision import transforms
 from torch import nn, optim
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from evaluation.utils import track_activations
 import evaluation.intrinsic_dimension as id
@@ -52,30 +53,15 @@ class Evaluation:
 
     def plot_ide(self, ide_layers):
 
-        label = 'Intrinsic Dimension'
-        xs = []
-        ys = []
-        for name, value in ide_layers.items():
-            # if "conv" in name:
-            xs.append(name)
-            ys.append(value)
-
-        fig, ax = plt.subplots()
-
-        # ax.plot(xs[:550], ys1[:550], label=algorithm1a, c='r')
-        ax.plot(xs, ys, label=label, c='b')
-
-        # ax2.plot(xs, ys2, label=algorithm1b, c='g')
-        # ax2.plot(xs[:550], zs2[:550], label=algorithm2b, c='g')
-        ax.set(xlabel='layer', ylabel='dimension')
-        # ax2.set(xlabel='iteration', ylabel='percentage right')
-        ax.legend(loc='upper left')
-        # ax2.legend(loc='upper left', bbox_to_anchor=(0, 0.9))
-        ax.grid()
-        # ax2.grid()
-        save_path = 'ide_local_loss.png'
-        plt.savefig(save_path)
-        plt.show()
+        sns.set_style('whitegrid')
+        sns.set(rc={"figure.figsize": (10, 6)})
+        dim_plot = sns.lineplot(data=ide_layers, x='layer', y='dimension', linewidth=2)
+        dim_plot.set(title='Intrinsic Dimension of Network Layers')
+        plt.xticks(rotation=25)
+        if self.cfg.show_plot:
+            plt.show()
+        fig = dim_plot.get_figure()
+        fig.savefig(self.cfg.plot_save_path)
 
     def plot_rsa(self, rsa_layers):
 
@@ -164,7 +150,7 @@ class Evaluation:
                 print('Finished evaluation')
 
                 if self.cfg.plot:
-                    self.plot_ide(ide_layers)
+                    self.plot_ide(ide_layers_df)
 
                 return
 
@@ -179,7 +165,9 @@ if __name__ == "__main__":
         "num_classes": 10,
         "seed": 1234,
         "data_loader_workers": 3,
-        "plot": True
+        "plot": True,
+        "show_plot": True,
+        "plot_save_path": 'internal_dimensions.png'
     })
 
     train_set, _ = get_datasets(cfg.data, "../data")
