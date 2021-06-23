@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import torch
 from torch import nn
 import numpy as np
@@ -67,7 +69,7 @@ class DDTPConvAllCNNC(nn.Module):
                            forward_activation=hidden_activation,
                            feedback_activation=feedback_activation)
         
-        l7 = DDTPConvLayer(192, 192, (3, 3), 10, [192, 8, 8],
+        l7 = DDTPConvLayer(192, 192, (3, 3), 10, [192, 6, 6],
                            stride=1, padding=0, dilation=1, groups=1,
                            bias=bias, padding_mode='zeros',
                            initialization=initialization,
@@ -75,7 +77,7 @@ class DDTPConvAllCNNC(nn.Module):
                            pool_stride=(1, 1), pool_padding=0, pool_dilation=1,
                            forward_activation=hidden_activation,
                            feedback_activation=feedback_activation)
-        l8 = DDTPConvLayer(192, 192, (1, 1), 10, [192, 8, 8],
+        l8 = DDTPConvLayer(192, 192, (1, 1), 10, [192, 6, 6],
                            stride=1, padding=0, dilation=1, groups=1,
                            bias=bias, padding_mode='zeros',
                            initialization=initialization,
@@ -247,8 +249,9 @@ class DDTPConvAllCNNC(nn.Module):
         parameterlist = []
         for layer in self.layers:
             parameterlist.append(layer.weights)
-            if layer.bias is not None:
-                parameterlist.append(layer.bias)
+            #if layer.bias is not None:
+            # now always saves also the biases
+            parameterlist.append(layer.bias)
         return parameterlist
 
     def get_feedback_parameter_list(self):
