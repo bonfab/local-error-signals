@@ -45,6 +45,6 @@ def str_to_logging_level(str):
     raise ValueError(f'logging level {str} not known')
 
 
-def shutdown_logging(logger):
+def retire_logger(logger):
     logger.handlers.clear()
-    logging.shutdown()
+    del logger

@@ -1,9 +1,11 @@
+import logging
+
 import hydra
 from omegaconf import OmegaConf
 
 from utils.eval import make_acc_plots
 from train import Trainer
-from utils.logging import get_logger, str_to_logging_level, shutdown_logging
+from utils.logging import get_logger, str_to_logging_level, retire_logger
 from utils.data import get_datasets
 from utils.models import get_model, load_best_model_from_exp_dir
 from utils.configuration import adjust_cfg, set_seed
@@ -25,7 +27,8 @@ def main(cfg: OmegaConf):
     model = load_best_model_from_exp_dir("./")
     agent = Evaluation(cfg.evaluation, model=model, data_set=train_set)
     agent.evaluate()
-    shutdown_logging(logger)
+    retire_logger(logger)
+    logging.shutdown()
 
 
 if __name__ == "__main__":
