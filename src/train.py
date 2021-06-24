@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from utils.data import to_one_hot
 from models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
-from utils.logging import get_logger, get_csv_logger
+from utils.logging import get_logger, get_csv_logger, retire_logger
 from utils.models import count_parameters
 
 
@@ -21,7 +21,7 @@ class Trainer:
         self.logger = logger
         if logger is None:
             self.logger = get_logger(__name__, logging.INFO)
-        self.csv_logger = get_csv_logger(file_path='training_results.csv')
+        self.csv_logger = None
         self.logger.info(model.__str__())
         self.logger.info(f'Model has {count_parameters(model)} parameters influenced by global loss')
 
@@ -182,7 +182,7 @@ class Trainer:
     def fit(self):
         ''' The main training and testing loop '''
         # start_epoch = 1 if checkpoint is None else 1 + checkpoint['epoch']
-
+        self.csv_logger = get_csv_logger(file_path='training_results.csv')
         # TODO: add checkpoint loading
         for epoch in range(self.cfg.epochs):
             # Train and test
@@ -194,6 +194,8 @@ class Trainer:
                                  f'{train_loss_local},{train_loss_global},{train_acc/100},'
                                  f'{valid_loss_local},{valid_loss_global},{valid_acc/100}')
             self.save_checkpoint(epoch, self.model, self.optimizer)
+
+        retire_logger(self.csv_logger)
 
     def save_checkpoint(self, epoch, model, optimizer):
         # Check if to save checkpoint

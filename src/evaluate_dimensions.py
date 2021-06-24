@@ -161,7 +161,7 @@ if __name__ == "__main__":
             "name": "CIFAR-10"
         },
         "model_dir": "../2021-06-18_12-50-30/3",
-        "batch_size": 100,
+        "batch_size": 500,
         "num_classes": 10,
         "seed": 1234,
         "data_loader_workers": 3,
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     })
 
     train_set, _ = get_datasets(cfg.data, "../data")
-    model = load_best_model_from_exp_dir("../2021-06-18_12-50-30/3")
+    model = load_best_model_from_exp_dir(cfg.model_dir)
 
     agent = Evaluation(cfg, model=model, data_set=train_set)
 
