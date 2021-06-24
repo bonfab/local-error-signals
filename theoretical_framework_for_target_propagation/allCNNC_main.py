@@ -33,10 +33,10 @@ args =  {'dataset': 'cifar10',
      'num_train': 1000,
      'num_test': 1000,
      'num_val': 1000,
-     'epochs': 50,
+     'epochs': 10,
      'batch_size': 128,
-     'lr': '0.1',
-     'lr_fb': '0.1', # learning rate for feedback parameters
+     'lr': '1',
+     'lr_fb': '1', # learning rate for feedback parameters
      'target_stepsize': 0.01,
      'optimizer': 'Adam',
      'optimizer_fb': 'Adam',
@@ -45,12 +45,13 @@ args =  {'dataset': 'cifar10',
      'forward_wd': 0.0,
      'feedback_wd': 0.0,
      'train_separate': False,
-     'parallel': False,
-     'not_randomized': False,
+     'parallel': True,
+     'normalize_lr': True,
+     'not_randomized': True,
      'train_randomized': False,
      'normalize_lr': False,
      'train_only_feedback_parameters': False,
-     'epochs_fb': 2,
+     'epochs_fb': 10,
      'soft_target': 0.9,
      'freeze_forward_weights': False,
      'freeze_fb_weights': False,
@@ -99,7 +100,7 @@ args =  {'dataset': 'cifar10',
      'multiple_hpsearch': False,
      'double_precision': False,
      'evaluate': True,
-     'out_dir': 'logs/acnnc_1000_2_weights',
+     'out_dir': 'logs/XXX5',
      'save_logs': False,
      'save_BP_angle': False,
      'save_GN_angle': False,
@@ -151,7 +152,7 @@ def load_network_w_weights(args, run_dir = "results/acnnc_1000_weights"):
     for i in range(len(net.layers)):
         net.layers[i]._weights = forward_parameters_loaded[i*2]
         net.layers[i]._bias = forward_parameters_loaded[(i*2) + 1]
-    print(summary(net, (3,32,32)))
+    print(summary(net.cuda(), (3,32,32)))
     return net
 
 
