@@ -19,7 +19,7 @@ from torchvision.datasets import CIFAR10
 from torchvision.utils import save_image
 
 
-from lib.conv_networks_AllCNN import DDTPConvAllCNNC
+from lib.conv_networks_AllCNN import DDTPConvAllCNNC, DDTPPureConvAllCNNC
 from lib.conv_network import DDTPConvNetwork
 from lib.train import train
 from lib import utils
@@ -35,8 +35,8 @@ args =  {'dataset': 'cifar10',
      'num_val': 1000,
      'epochs': 10,
      'batch_size': 128,
-     'lr': '1',
-     'lr_fb': '1', # learning rate for feedback parameters
+     'lr': '.1',
+     'lr_fb': '.1', # learning rate for feedback parameters
      'target_stepsize': 0.01,
      'optimizer': 'Adam',
      'optimizer_fb': 'Adam',
@@ -83,7 +83,7 @@ args =  {'dataset': 'cifar10',
      'size_input': 784,
      'size_output': 10,
      'size_hidden_fb': 500,
-     'hidden_activation': 'relu',
+     'hidden_activation': 'tanh',
      'output_activation': "softmax",
      'fb_activation': "linear",
      'no_bias': False,
@@ -135,7 +135,7 @@ def load_network_w_weights(args, run_dir = "results/acnnc_1000_weights"):
                             args.output_space_plot_bp or \
                             args.gn_damping_hpsearch or \
                             args.save_nullspace_norm_ratio
-    net = DDTPConvAllCNNC(bias=not args.no_bias,
+    net = DDTPPureConvAllCNNC(bias=not args.no_bias,
                                         hidden_activation=args.hidden_activation,
                                         feedback_activation=args.fb_activation,
                                         initialization=args.initialization,
