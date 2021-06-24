@@ -46,5 +46,11 @@ def str_to_logging_level(str):
 
 
 def retire_logger(logger):
+    for handler in logger.handlers:
+        try:
+            handler.flush()
+            handler.close()
+        except AttributeError:
+            pass
     logger.handlers.clear()
     del logger
