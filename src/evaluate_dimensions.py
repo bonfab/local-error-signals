@@ -61,14 +61,16 @@ class Evaluation:
         if self.cfg.show_plot:
             plt.show()
         fig = dim_plot.get_figure()
-        fig.savefig(self.cfg.plot_save_path)
+        fig.savefig(self.cfg.ide.plot_save_path)
 
     def plot_rsa(self, rsa_layers):
 
+        print(len(rsa_layers))
         matrix = np.zeros((32, 32))
+
         for i in range(32):
             for j in range(i, 32):
-                matrix[i][j] = self.cos_between(rsa_layers[i], rsa_layers[j])
+                matrix[i][j] = utils.cos_similarity(rsa_layers[i], rsa_layers[j])
                 matrix[j][i] = matrix[i][j]
 
         plt.imshow(matrix, cmap="bwr", origin="lower")
@@ -131,10 +133,13 @@ class Evaluation:
                     handle.remove()
 
                 for name, acts in activations.items():
-                    mean, _ = id.computeID(acts, verbose=False)
-                    ide_layers[name[2]] += mean
-                    ide_layers[name[2]] = ide_layers[name[2]] / 2
-                    # rsa_layers[name[2]] = (rsa.correlation_matrix(acts))
+
+                    if self.cfg.ide.calculate:
+                        mean, _ = id.computeID(acts, nres=self.cfg.ide.nres, fraction=self.cfg.ide.fraction, verbose=False)
+                        ide_layers[name[2]] += mean
+                        ide_layers[name[2]] = ide_layers[name[2]] / 2
+
+                    rsa_layers[name[2]] = (rsa.correlation_matrix(acts))
 
                 activations = {}
                 running_loss += loss.item()
@@ -145,12 +150,14 @@ class Evaluation:
                     'layer': ide_layers.keys(),
                     'dimension': ide_layers.values()
                 })
-                ide_layers_df.to_csv('./internal_dimensions.csv', index=False)
+                ide_layers_df.to_csv(self.cfg.ide.csv_save_path, index=False)
 
                 print('Finished evaluation')
 
                 if self.cfg.plot:
-                    self.plot_ide(ide_layers_df)
+                    if self.cfg.ide.calculate:
+                        self.plot_ide(ide_layers_df)
+                    self.plot_rsa(rsa_layers)
 
                 return
 
@@ -167,7 +174,17 @@ if __name__ == "__main__":
         "data_loader_workers": 3,
         "plot": True,
         "show_plot": True,
-        "plot_save_path": 'internal_dimensions.png'
+        "ide": {
+            "calculate": False,
+            "nres": 3,
+            "fraction": 0.5,
+            "csv_save_path": './internal_dimensions.csv',
+            "plot_save_path": 'internal_dimensions.png'
+        },
+        "rsa": {
+            "calculate": True,
+        }
+
     })
 
     train_set, _ = get_datasets(cfg.data, "../data")

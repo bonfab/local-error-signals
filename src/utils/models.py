@@ -54,7 +54,6 @@ def load_best_model_from_exp_dir(exp_dir, cpu=not torch.cuda.is_available()):
     if cpu:
         exp_cfg.train.gpus = 0
         exp_cfg.model.loss.gpus = 0
-    print(exp_cfg)
     model = get_model(exp_cfg.model)
     checkpoint_index = find_best_checkpoint_index(os.path.join(exp_dir, "training_results.csv"))
     params_path = os.path.join(exp_dir, "checkpoints", f"{checkpoint_index}.pt")
