@@ -201,3 +201,10 @@ def update(d, u):
         else:
             d[k] = v
     return d
+
+
+def cos_similarity(A, B):
+    A = A / np.linalg.norm(A)
+    B = B / np.linalg.norm(B)
+
+    return A.dot(B)

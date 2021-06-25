@@ -60,7 +60,7 @@ def corr_dist_of_input_rdms(input_rdms):
 def correlation_matrix(activations, SPLITROWS=100):
     # number of rows in one chunk
 
-    activations = np.reshape(activations, (100,-1))
+    activations = np.reshape(activations, (activations.shape[0], -1))
     numrows = activations.shape[0]
 
     # subtract means form the input data
