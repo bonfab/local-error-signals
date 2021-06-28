@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
+from optimizers.sam import SAM
 
 
 def similarity_matrix(x, no_similarity_std=False):
@@ -159,6 +160,33 @@ class LocalLossBlock(nn.Module):
         loss_unsup = self.calc_loss_unsup(x, Rh, h)
         loss_sup = self.calc_loss_sup(Rh, h, y, y_onehot)
         return self.args.alpha * loss_unsup + (1 - self.args.alpha) * loss_sup
+    
+    def step_sam(self, x, Rh, h, y, y_onehot):
+        # Combine unsupervised and supervised loss
+        loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
+        print(f'loss 1 {loss}')
+        
+        # Single-step back-propagation
+        if self.training:
+            loss.backward(retain_graph=self.args.no_detach)
+
+        # First optimizer step in this layer and detach computational graph
+        if self.training and not self.args.no_detach:
+            self.optimizer.first_step(zero_grad=True)
+            
+        # Combine unsupervised and supervised loss
+        loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
+        print(f'loss 2 {loss}')
+        
+        # Single-step back-propagation
+        if self.training:
+            loss.backward(retain_graph=self.args.no_detach)
+            
+        # Second optimizer step in this layer and detach computational graph
+        if self.training and not self.args.no_detach:
+            self.optimizer.second_step(zero_grad=True)
+        
+        return loss
 
 
 
@@ -215,6 +243,8 @@ class LocalLossBlockLinear(LocalLossBlock):
         elif args.optim == 'adam' or args.optim == 'amsgrad':
             self.optimizer = optim.Adam(self.parameters(), lr=0, weight_decay=args.weight_decay,
                                         amsgrad=args.optim == 'amsgrad')
+        if args.sam:
+            self.optimizer = SAM(self.parameters(), self.optimizer, lr=0.1, momentum=0.9)
 
         self.clear_stats()
 
@@ -259,6 +289,7 @@ class LocalLossBlockLinear(LocalLossBlock):
                 self.examples += h.size(0)
 
         return loss_sup
+        
 
     def forward(self, x, y=None, y_onehot=None):
 
@@ -280,6 +311,7 @@ class LocalLossBlockLinear(LocalLossBlock):
         if not self.local_eval:
             # Calculate local loss and update weights
             if (self.training or not self.no_print_stats) and not self.args.backprop:
+                
                 # Calculate hidden layer similarity matrix
                 if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
                     if self.args.bio:
@@ -287,20 +319,25 @@ class LocalLossBlockLinear(LocalLossBlock):
                     else:
                         h_loss = self.linear_loss(h)
                     Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
+                
+                if self.args.sam:
+                    loss = self.step_sam(x, Rh, h, y, y_onehot)
+                    if self.training and not self.args.no_detach:
+                        h_return.detach_()
+                else:
+                    # Combine unsupervised and supervised loss
+                    loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
 
-                # Combine unsupervised and supervised loss
-                loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
+                    # Single-step back-propagation
+                    if self.training:
+                        loss.backward(retain_graph=self.args.no_detach)
 
-                # Single-step back-propagation
-                if self.training:
-                    loss.backward(retain_graph=self.args.no_detach)
-
-                # Update weights in this layer and detatch computational graph
-                if self.training and not self.args.no_detach:
-                    self.optimizer.step()
-                    self.optimizer.zero_grad()
-                    h_return.detach_()
-
+                    # Update weights in this layer and detach computational graph
+                    if self.training and not self.args.no_detach:
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
+                        h_return.detach_()
+                    
                 loss = loss.item()
             else:
                 loss = 0.0
@@ -396,7 +433,8 @@ class LocalLossBlockConv(LocalLossBlock):
         elif args.optim == 'adam' or args.optim == 'amsgrad':
             self.optimizer = optim.Adam(self.parameters(), lr=0, weight_decay=args.weight_decay,
                                         amsgrad=args.optim == 'amsgrad')
-
+        if args.sam:
+            self.optimizer = SAM(self.parameters(), self.optimizer, lr=0.1, momentum=0.9)
         self.clear_stats()
 
     def calc_loss_sup(self, Rh, h , y, y_onehot):
@@ -496,19 +534,24 @@ class LocalLossBlockConv(LocalLossBlock):
                     else:
                         h_loss = self.conv_loss(h)
                     Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
+                
+                if self.args.sam:
+                    loss = self.step_sam(x, Rh, h, y, y_onehot)
+                    if self.training and not self.args.no_detach:
+                        h_return.detach_()
+                else:
+                    # Combine unsupervised and supervised loss
+                    loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
 
-                # Combine unsupervised and supervised loss
-                loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
+                    # Single-step back-propagation
+                    if self.training:
+                        loss.backward(retain_graph=self.args.no_detach)
 
-                # Single-step back-propagation
-                if self.training:
-                    loss.backward(retain_graph=self.args.no_detach)
-
-                # Update weights in this layer and detach computational graph
-                if self.training and not self.args.no_detach:
-                    self.optimizer.step()
-                    self.optimizer.zero_grad()
-                    h_return.detach_()
+                    # Update weights in this layer and detach computational graph
+                    if self.training and not self.args.no_detach:
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
+                        h_return.detach_()
 
                 loss = loss.item()
             else:
