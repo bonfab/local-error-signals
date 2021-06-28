@@ -181,6 +181,7 @@ class Trainer:
 
     def fit(self):
         ''' The main training and testing loop '''
+        torch.autograd.set_detect_anomaly(True)
         # start_epoch = 1 if checkpoint is None else 1 + checkpoint['epoch']
         self.csv_logger = get_csv_logger(file_path='training_results.csv')
         # TODO: add checkpoint loading

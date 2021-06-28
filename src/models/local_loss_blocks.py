@@ -97,9 +97,24 @@ class LinearFA(nn.Module):
 
 class LocalLossBlock(nn.Module):
 
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
+        self.args = args
         self.local_eval = False
+
+    def select_optimizer(self):
+
+        if self.args.sam:
+            if self.args.optim == 'sgd':
+                self.optimizer = SAM(self.parameters(), optim.SGD, lr=0, weight_decay=self.args.weight_decay, momentum=self.args.momentum)
+            elif self.args.optim == 'adam' or self.args.optim == 'amsgrad':
+                self.optimizer = SAM(self.parameters(), optim.Adam, lr=0, weight_decay=self.args.weight_decay, amsgrad=self.args.optim == 'amsgrad')
+
+        elif self.args.optim == 'sgd':
+            self.optimizer = optim.SGD(self.parameters(), lr=0, weight_decay=self.args.weight_decay, momentum=self.args.momentum)
+        elif self.args.optim == 'adam' or self.args.optim == 'amsgrad':
+            self.optimizer = optim.Adam(self.parameters(), lr=0, weight_decay=self.args.weight_decay,
+                                        amsgrad=self.args.optim == 'amsgrad')
 
     def local_loss_eval(self):
         self.local_eval = True
@@ -156,38 +171,48 @@ class LocalLossBlock(nn.Module):
     def calc_loss_sup(self, Rh, h, y, y_onehot):
         return
 
+    @abc.abstractmethod
+    def forward_pass(self, x):
+        return
+
+    @abc.abstractmethod
+    def calculate_similarity_matrix(self, h):
+        return
+
     def calc_combined_loss(self, x, Rh, h, y, y_onehot):
         loss_unsup = self.calc_loss_unsup(x, Rh, h)
         loss_sup = self.calc_loss_sup(Rh, h, y, y_onehot)
         return self.args.alpha * loss_unsup + (1 - self.args.alpha) * loss_sup
-    
+
     def step_sam(self, x, Rh, h, y, y_onehot):
         # Combine unsupervised and supervised loss
         loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
-        print(f'loss 1 {loss}')
-        
+        #print(f'loss 1 {loss.item()}')
+
         # Single-step back-propagation
         if self.training:
-            loss.backward(retain_graph=self.args.no_detach)
+            loss.backward(retain_graph=False)
 
         # First optimizer step in this layer and detach computational graph
         if self.training and not self.args.no_detach:
             self.optimizer.first_step(zero_grad=True)
-            
+
+        h_return, h = self.forward_pass(x)
+        Rh = self.calculate_similarity_matrix(h)
+
         # Combine unsupervised and supervised loss
         loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
-        print(f'loss 2 {loss}')
-        
+        #print(f'loss 2 {loss.item()}')
+
         # Single-step back-propagation
         if self.training:
             loss.backward(retain_graph=self.args.no_detach)
-            
+
         # Second optimizer step in this layer and detach computational graph
         if self.training and not self.args.no_detach:
             self.optimizer.second_step(zero_grad=True)
-        
-        return loss
 
+        return loss
 
 
 class LocalLossBlockLinear(LocalLossBlock):
@@ -205,9 +230,8 @@ class LocalLossBlockLinear(LocalLossBlock):
 
     def __init__(self, args, num_in, num_out, num_classes, nonlin="relu", first_layer=False, dropout=0, batchnorm=None,
                  print_stats=True):
-        super().__init__()
+        super().__init__(args)
 
-        self.args = args
         self.no_print_stats = not print_stats
         self.num_classes = num_classes
         self.first_layer = first_layer
@@ -238,14 +262,7 @@ class LocalLossBlockLinear(LocalLossBlock):
             self.nonlin = nn.LeakyReLU(negative_slope=0.01, inplace=True)
         if self.dropout_p > 0:
             self.dropout = torch.nn.Dropout(p=self.dropout_p, inplace=False)
-        if args.optim == 'sgd':
-            self.optimizer = optim.SGD(self.parameters(), lr=0, weight_decay=args.weight_decay, momentum=args.momentum)
-        elif args.optim == 'adam' or args.optim == 'amsgrad':
-            self.optimizer = optim.Adam(self.parameters(), lr=0, weight_decay=args.weight_decay,
-                                        amsgrad=args.optim == 'amsgrad')
-        if args.sam:
-            self.optimizer = SAM(self.parameters(), self.optimizer, lr=0.1, momentum=0.9)
-
+        self.select_optimizer()
         self.clear_stats()
 
     def calc_loss_sup(self, Rh, h, y, y_onehot):
@@ -289,13 +306,9 @@ class LocalLossBlockLinear(LocalLossBlock):
                 self.examples += h.size(0)
 
         return loss_sup
-        
 
-    def forward(self, x, y=None, y_onehot=None):
+    def forward_pass(self, x):
 
-        assert not (y is None or y_onehot is None) or self.local_eval
-
-        # The linear transformation
         h = self.encoder(x)
 
         # Add batchnorm and nonlinearity
@@ -308,18 +321,33 @@ class LocalLossBlockLinear(LocalLossBlock):
         if self.dropout_p > 0:
             h_return = self.dropout(h_return)
 
+        return h_return, h
+
+    def calculate_similarity_matrix(self, h):
+        Rh = 0
+
+        # Calculate hidden layer similarity matrix
+        if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
+            if self.args.bio:
+                h_loss = h
+            else:
+                h_loss = self.linear_loss(h)
+            Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
+
+        return Rh
+
+    def forward(self, x, y=None, y_onehot=None):
+
+        assert not (y is None or y_onehot is None) or self.local_eval
+
+        h_return, h = self.forward_pass(x)
+
         if not self.local_eval:
             # Calculate local loss and update weights
             if (self.training or not self.no_print_stats) and not self.args.backprop:
-                
-                # Calculate hidden layer similarity matrix
-                if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
-                    if self.args.bio:
-                        h_loss = h
-                    else:
-                        h_loss = self.linear_loss(h)
-                    Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
-                
+
+                Rh = self.calculate_similarity_matrix(h)
+
                 if self.args.sam:
                     loss = self.step_sam(x, Rh, h, y, y_onehot)
                     if self.training and not self.args.no_detach:
@@ -337,7 +365,7 @@ class LocalLossBlockLinear(LocalLossBlock):
                         self.optimizer.step()
                         self.optimizer.zero_grad()
                         h_return.detach_()
-                    
+
                 loss = loss.item()
             else:
                 loss = 0.0
@@ -371,8 +399,7 @@ class LocalLossBlockConv(LocalLossBlock):
     def __init__(self, args, ch_in, ch_out, kernel_size, stride, padding, num_classes, dim_out, nonlin='relu',
                  first_layer=False,
                  dropout=0, bias=None, pre_act=False, post_act=True):
-        super().__init__()
-        self.args = args
+        super().__init__(args)
         self.no_print_stats = not self.args.print_stats
         self.ch_in = ch_in
         self.ch_out = ch_out
@@ -428,16 +455,10 @@ class LocalLossBlockConv(LocalLossBlock):
             self.nonlin = nn.LeakyReLU(negative_slope=0.01, inplace=True)
         if self.dropout_p > 0:
             self.dropout = torch.nn.Dropout2d(p=self.dropout_p, inplace=False)
-        if args.optim == 'sgd':
-            self.optimizer = optim.SGD(self.parameters(), lr=0, weight_decay=args.weight_decay, momentum=args.momentum)
-        elif args.optim == 'adam' or args.optim == 'amsgrad':
-            self.optimizer = optim.Adam(self.parameters(), lr=0, weight_decay=args.weight_decay,
-                                        amsgrad=args.optim == 'amsgrad')
-        if args.sam:
-            self.optimizer = SAM(self.parameters(), self.optimizer, lr=0.1, momentum=0.9)
+        self.select_optimizer()
         self.clear_stats()
 
-    def calc_loss_sup(self, Rh, h , y, y_onehot):
+    def calc_loss_sup(self, Rh, h, y, y_onehot):
         if self.args.loss_sup == 'sim':
             if self.args.bio:
                 Ry = similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
@@ -483,9 +504,7 @@ class LocalLossBlockConv(LocalLossBlock):
 
         return loss_sup
 
-    def forward(self, x, y=None, y_onehot=None, x_shortcut=None):
-
-        assert not (y is None or y_onehot is None) or self.local_eval
+    def forward_pass(self, x, x_shortcut=None):
 
         # If pre-activation, apply batchnorm->nonlin->dropout
         if self.pre_act:
@@ -512,11 +531,35 @@ class LocalLossBlockConv(LocalLossBlock):
 
         # Save return value and add dropout
         h_return = h
+
         if self.post_act and self.dropout_p > 0:
             h_return = self.dropout(h_return)
 
+        return h_return, h
+
+    def calculate_similarity_matrix(self, h):
+
+        Rh = 0
+
+        # Calculate hidden feature similarity matrix
+        if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
+            if self.args.bio:
+                h_loss = h
+                if self.avg_pool is not None:
+                    h_loss = self.avg_pool(h_loss)
+            else:
+                h_loss = self.conv_loss(h)
+            Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
+
+        return Rh
+
+    def forward(self, x, y=None, y_onehot=None, x_shortcut=None):
+
+        assert not (y is None or y_onehot is None) or self.local_eval
+
+        h_return, h = self.forward_pass(x, x_shortcut)
+
         if not self.local_eval:
-            Rh = 0
             # Calculate local loss and update weights
             if (not self.no_print_stats or self.training) and not self.args.backprop:
                 # Add batchnorm and nonlinearity if not done already
@@ -525,16 +568,8 @@ class LocalLossBlockConv(LocalLossBlock):
                         h = self.bn(h)
                     h = self.nonlin(h)
 
-                # Calculate hidden feature similarity matrix
-                if self.args.loss_unsup == 'sim' or self.args.loss_sup == 'sim' or self.args.loss_sup == 'predsim':
-                    if self.args.bio:
-                        h_loss = h
-                        if self.avg_pool is not None:
-                            h_loss = self.avg_pool(h_loss)
-                    else:
-                        h_loss = self.conv_loss(h)
-                    Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
-                
+                Rh = self.calculate_similarity_matrix(h)
+
                 if self.args.sam:
                     loss = self.step_sam(x, Rh, h, y, y_onehot)
                     if self.training and not self.args.no_detach:
