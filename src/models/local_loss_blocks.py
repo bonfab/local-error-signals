@@ -7,48 +7,7 @@ from torch import optim
 import torch.nn.functional as F
 from optimizers.sam import SAM
 
-
-def similarity_matrix(x, no_similarity_std=False):
-    ''' Calculate adjusted cosine similarity matrix of size x.size(0) x x.size(0). '''
-    if x.dim() == 4:
-        if not no_similarity_std and x.size(1) > 3 and x.size(2) > 1:
-            z = x.view(x.size(0), x.size(1), -1)
-            x = z.std(dim=2)
-        else:
-            x = x.view(x.size(0), -1)
-    xc = x - x.mean(dim=1).unsqueeze(1)
-    xn = xc / (1e-8 + torch.sqrt(torch.sum(xc ** 2, dim=1))).unsqueeze(1)
-    R = xn.matmul(xn.transpose(1, 0)).clamp(-1, 1)
-    return R
-
-
-class LinearFAFunction(torch.autograd.Function):
-    '''Autograd function for linear feedback alignment module.
-    '''
-
-    @staticmethod
-    def forward(context, input, weight, weight_fa, bias=None):
-        context.save_for_backward(input, weight, weight_fa, bias)
-        output = input.matmul(weight.t())
-        if bias is not None:
-            output += bias.unsqueeze(0).expand_as(output)
-
-        return output
-
-    @staticmethod
-    def backward(context, grad_output):
-        input, weight, weight_fa, bias = context.saved_variables
-        grad_input = grad_weight = grad_weight_fa = grad_bias = None
-
-        if context.needs_input_grad[0]:
-            grad_input = grad_output.matmul(weight_fa)
-        if context.needs_input_grad[1]:
-            grad_weight = grad_output.t().matmul(input)
-        if bias is not None and context.needs_input_grad[2]:
-            grad_bias = grad_output.sum(0).squeeze(0)
-
-        return grad_input, grad_weight, grad_weight_fa, grad_bias
-
+from utils.models import similarity_matrix, LinearFAFunction
 
 class LinearFA(nn.Module):
     '''Linear feedback alignment module.
@@ -185,6 +144,7 @@ class LocalLossBlock(nn.Module):
         return self.args.alpha * loss_unsup + (1 - self.args.alpha) * loss_sup
 
     def step_sam(self, x, Rh, h, y, y_onehot):
+
         # Combine unsupervised and supervised loss
         loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
         #print(f'loss 1 {loss.item()}')
@@ -197,7 +157,7 @@ class LocalLossBlock(nn.Module):
         if self.training and not self.args.no_detach:
             self.optimizer.first_step(zero_grad=True)
 
-        h_return, h = self.forward_pass(x)
+        _, h = self.forward_pass(x)
         Rh = self.calculate_similarity_matrix(h)
 
         # Combine unsupervised and supervised loss
@@ -535,6 +495,12 @@ class LocalLossBlockConv(LocalLossBlock):
         if self.post_act and self.dropout_p > 0:
             h_return = self.dropout(h_return)
 
+        # Add batchnorm and nonlinearity if not done already
+        if not self.post_act and (not self.no_print_stats or self.training) and not self.args.backprop:
+            if not self.args.no_batch_norm:
+                h = self.bn(h)
+            h = self.nonlin(h)
+
         return h_return, h
 
     def calculate_similarity_matrix(self, h):
@@ -562,11 +528,6 @@ class LocalLossBlockConv(LocalLossBlock):
         if not self.local_eval:
             # Calculate local loss and update weights
             if (not self.no_print_stats or self.training) and not self.args.backprop:
-                # Add batchnorm and nonlinearity if not done already
-                if not self.post_act:
-                    if not self.args.no_batch_norm:
-                        h = self.bn(h)
-                    h = self.nonlin(h)
 
                 Rh = self.calculate_similarity_matrix(h)
 
@@ -577,7 +538,7 @@ class LocalLossBlockConv(LocalLossBlock):
                 else:
                     # Combine unsupervised and supervised loss
                     loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
-
+                    #print(loss)
                     # Single-step back-propagation
                     if self.training:
                         loss.backward(retain_graph=self.args.no_detach)
@@ -591,7 +552,6 @@ class LocalLossBlockConv(LocalLossBlock):
                 loss = loss.item()
             else:
                 loss = 0.0
-
             return h_return, loss
 
         else:
