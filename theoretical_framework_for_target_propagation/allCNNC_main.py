@@ -83,7 +83,7 @@ args =  {'dataset': 'cifar10',
      'size_input': 784,
      'size_output': 10,
      'size_hidden_fb': 500,
-     'hidden_activation': 'tanh',
+     'hidden_activation': 'relu',
      'output_activation': "softmax",
      'fb_activation': "linear",
      'no_bias': False,
@@ -121,7 +121,7 @@ args =  {'dataset': 'cifar10',
      'save_nullspace_norm_ratio': False
      }
 
-def load_network_w_weights(args, run_dir = "results/acnnc_1000_weights"):
+def load_network_w_weights(args, run_dir = "results/acnnc_1000_relu_Adam_Pure_lr.1"):
     
     # function to load the AllCNNC Network according to the definition and load presaved weights
     from torchsummary import summary
@@ -172,7 +172,7 @@ if __name__ == "__main__":
                             args.gn_damping_hpsearch or \
                             args.save_nullspace_norm_ratio
 
-    allCNNC = DDTPConvAllCNNC(bias=not args.no_bias,
+    allCNNC = DDTPPureConvAllCNNC(bias=not args.no_bias,
                                            hidden_activation=args.hidden_activation,
                                            feedback_activation=args.fb_activation,
                                            initialization=args.initialization,
