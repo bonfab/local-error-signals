@@ -7,51 +7,7 @@ from torch import optim
 import torch.nn.functional as F
 from optimizers.sam import SAM
 
-from utils.models import similarity_matrix, LinearFAFunction
-
-class LinearFA(nn.Module):
-    '''Linear feedback alignment module.
-    Args:
-        input_features (int): Number of input features to linear layer.
-        output_features (int): Number of output features from linear layer.
-        bias (bool): True if to use trainable bias.
-    '''
-
-    def __init__(self, input_features, output_features, bias=True):
-        super(LinearFA, self).__init__()
-        self.input_features = input_features
-        self.output_features = output_features
-
-        self.weight = nn.Parameter(torch.Tensor(output_features, input_features))
-        self.weight_fa = nn.Parameter(torch.Tensor(output_features, input_features))
-        if bias:
-            self.bias = nn.Parameter(torch.Tensor(output_features))
-        else:
-            self.register_parameter('bias', None)
-
-        self.reset_parameters()
-
-        if self.args.gpus:
-            self.weight.data = self.weight.data.cuda()
-            self.weight_fa.data = self.weight_fa.data.cuda()
-            if bias:
-                self.bias.data = self.bias.data.cuda()
-
-    def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.weight.size(1))
-        self.weight.data.uniform_(-stdv, stdv)
-        self.weight_fa.data.uniform_(-stdv, stdv)
-        if self.bias is not None:
-            self.bias.data.zero_()
-
-    def forward(self, input):
-        return LinearFAFunction.apply(input, self.weight, self.weight_fa, self.bias)
-
-    def __repr__(self):
-        return self.__class__.__name__ + '(' \
-               + 'in_features=' + str(self.input_features) \
-               + ', out_features=' + str(self.output_features) \
-               + ', bias=' + str(self.bias is not None) + ')'
+from utils.models import similarity_matrix, LinearFAFunction, LinearFA, find_zero_grads
 
 
 class LocalLossBlock(nn.Module):
@@ -61,16 +17,24 @@ class LocalLossBlock(nn.Module):
         self.args = args
         self.local_eval = False
 
+    def print_grads(self):
+        for name, module in self.named_modules():
+            module.register_backward_hook(find_zero_grads(name))
+
+
     def select_optimizer(self):
 
         if self.args.sam:
             if self.args.optim == 'sgd':
-                self.optimizer = SAM(self.parameters(), optim.SGD, lr=0, weight_decay=self.args.weight_decay, momentum=self.args.momentum)
+                self.optimizer = SAM(self.parameters(), optim.SGD, lr=0, weight_decay=self.args.weight_decay,
+                                     momentum=self.args.momentum)
             elif self.args.optim == 'adam' or self.args.optim == 'amsgrad':
-                self.optimizer = SAM(self.parameters(), optim.Adam, lr=0, weight_decay=self.args.weight_decay, amsgrad=self.args.optim == 'amsgrad')
+                self.optimizer = SAM(self.parameters(), optim.Adam, lr=0, weight_decay=self.args.weight_decay,
+                                     amsgrad=self.args.optim == 'amsgrad')
 
         elif self.args.optim == 'sgd':
-            self.optimizer = optim.SGD(self.parameters(), lr=0, weight_decay=self.args.weight_decay, momentum=self.args.momentum)
+            self.optimizer = optim.SGD(self.parameters(), lr=0, weight_decay=self.args.weight_decay,
+                                       momentum=self.args.momentum)
         elif self.args.optim == 'adam' or self.args.optim == 'amsgrad':
             self.optimizer = optim.Adam(self.parameters(), lr=0, weight_decay=self.args.weight_decay,
                                         amsgrad=self.args.optim == 'amsgrad')
@@ -147,7 +111,7 @@ class LocalLossBlock(nn.Module):
 
         # Combine unsupervised and supervised loss
         loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
-        #print(f'loss 1 {loss.item()}')
+        # print(f'loss 1 {loss.item()}')
 
         # Single-step back-propagation
         if self.training:
@@ -162,7 +126,7 @@ class LocalLossBlock(nn.Module):
 
         # Combine unsupervised and supervised loss
         loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
-        #print(f'loss 2 {loss.item()}')
+        # print(f'loss 2 {loss.item()}')
 
         # Single-step back-propagation
         if self.training:
@@ -416,6 +380,7 @@ class LocalLossBlockConv(LocalLossBlock):
         if self.dropout_p > 0:
             self.dropout = torch.nn.Dropout2d(p=self.dropout_p, inplace=False)
         self.select_optimizer()
+        #self.print_grads()
         self.clear_stats()
 
     def calc_loss_sup(self, Rh, h, y, y_onehot):
@@ -538,7 +503,6 @@ class LocalLossBlockConv(LocalLossBlock):
                 else:
                     # Combine unsupervised and supervised loss
                     loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
-                    #print(loss)
                     # Single-step back-propagation
                     if self.training:
                         loss.backward(retain_graph=self.args.no_detach)

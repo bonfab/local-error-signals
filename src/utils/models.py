@@ -1,3 +1,4 @@
+import math
 import os
 
 import pandas as pd
@@ -59,6 +60,60 @@ class LinearFAFunction(torch.autograd.Function):
             grad_bias = grad_output.sum(0).squeeze(0)
 
         return grad_input, grad_weight, grad_weight_fa, grad_bias
+
+
+class LinearFA(nn.Module):
+    '''Linear feedback alignment module.
+    Args:
+        input_features (int): Number of input features to linear layer.
+        output_features (int): Number of output features from linear layer.
+        bias (bool): True if to use trainable bias.
+    '''
+
+    def __init__(self, input_features, output_features, bias=True):
+        super(LinearFA, self).__init__()
+        self.input_features = input_features
+        self.output_features = output_features
+
+        self.weight = nn.Parameter(torch.Tensor(output_features, input_features))
+        self.weight_fa = nn.Parameter(torch.Tensor(output_features, input_features))
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(output_features))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+        if self.args.gpus:
+            self.weight.data = self.weight.data.cuda()
+            self.weight_fa.data = self.weight_fa.data.cuda()
+            if bias:
+                self.bias.data = self.bias.data.cuda()
+
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.weight.size(1))
+        self.weight.data.uniform_(-stdv, stdv)
+        self.weight_fa.data.uniform_(-stdv, stdv)
+        if self.bias is not None:
+            self.bias.data.zero_()
+
+    def forward(self, input):
+        return LinearFAFunction.apply(input, self.weight, self.weight_fa, self.bias)
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(' \
+               + 'in_features=' + str(self.input_features) \
+               + ', out_features=' + str(self.output_features) \
+               + ', bias=' + str(self.bias is not None) + ')'
+
+
+def find_zero_grads(name):
+    def hook(self, grad_in, grad_out):
+        if len([1 for grad in grad_in if grad is not None and (grad == 0).all()]) > 0 or len([1 for grad in grad_out if grad is not None and (grad == 0).all()]) > 0:
+            print(f"\ngrad of {name}:")
+            print(f"Grad in: {[((grad == 0).all(), grad.shape) for grad in grad_in if grad is not None]}\n"
+            f"Grad out {[((grad==0).all(), grad.shape) for grad in grad_out if grad is not None]}")
+    return hook
 
 
 def count_parameters(model):

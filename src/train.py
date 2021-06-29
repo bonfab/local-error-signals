@@ -103,6 +103,7 @@ class Trainer:
                 self.model.optim_step()
 
             pred = output.max(1)[1]  # get the index of the max log-probability
+            #print(pred, target)
             correct += pred.eq(target_).cpu().sum()
 
             # Update progress bar
