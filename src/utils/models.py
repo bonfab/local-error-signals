@@ -19,6 +19,48 @@ def get_model(cfg, logger=None):
         return models.AllCNN(cfg.loss, cfg.input_dim, cfg.num_classes)
 
 
+def similarity_matrix(x, no_similarity_std=False):
+    ''' Calculate adjusted cosine similarity matrix of size x.size(0) x x.size(0). '''
+    if x.dim() == 4:
+        if not no_similarity_std and x.size(1) > 3 and x.size(2) > 1:
+            z = x.view(x.size(0), x.size(1), -1)
+            x = z.std(dim=2)
+        else:
+            x = x.view(x.size(0), -1)
+    xc = x - x.mean(dim=1).unsqueeze(1)
+    xn = xc / (1e-8 + torch.sqrt(torch.sum(xc ** 2, dim=1))).unsqueeze(1)
+    R = xn.matmul(xn.transpose(1, 0)).clamp(-1, 1)
+    return R
+
+
+class LinearFAFunction(torch.autograd.Function):
+    '''Autograd function for linear feedback alignment module.
+    '''
+
+    @staticmethod
+    def forward(context, input, weight, weight_fa, bias=None):
+        context.save_for_backward(input, weight, weight_fa, bias)
+        output = input.matmul(weight.t())
+        if bias is not None:
+            output += bias.unsqueeze(0).expand_as(output)
+
+        return output
+
+    @staticmethod
+    def backward(context, grad_output):
+        input, weight, weight_fa, bias = context.saved_variables
+        grad_input = grad_weight = grad_weight_fa = grad_bias = None
+
+        if context.needs_input_grad[0]:
+            grad_input = grad_output.matmul(weight_fa)
+        if context.needs_input_grad[1]:
+            grad_weight = grad_output.t().matmul(input)
+        if bias is not None and context.needs_input_grad[2]:
+            grad_bias = grad_output.sum(0).squeeze(0)
+
+        return grad_input, grad_weight, grad_weight_fa, grad_bias
+
+
 def count_parameters(model):
     ''' Count number of parameters in model influenced by global loss. '''
     return sum(p.numel() for p in model.parameters() if p.requires_grad)

@@ -1,8 +1,8 @@
 # @package _group_
-batch_size: 3000
+batch_size: 500
 num_classes: 10
 seed: 1234
-data_loader_workers: 3
+data_loader_workers: 0
 plot: True
 show_plot: True
 plot_save_path: 'internal_dimensions.png'
