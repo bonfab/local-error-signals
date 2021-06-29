@@ -21,8 +21,9 @@ class LocalLossBlock(nn.Module):
         for name, module in self.named_modules():
             module.register_backward_hook(find_zero_grads(name))
 
-
     def select_optimizer(self):
+        if self.args.backprop:
+            return
 
         if self.args.sam:
             if self.args.optim == 'sgd':
@@ -31,6 +32,9 @@ class LocalLossBlock(nn.Module):
             elif self.args.optim == 'adam' or self.args.optim == 'amsgrad':
                 self.optimizer = SAM(self.parameters(), optim.Adam, lr=0, weight_decay=self.args.weight_decay,
                                      amsgrad=self.args.optim == 'amsgrad')
+            if self.args.exponential_lr_scheduler:
+                self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer.base_optimizer,
+                                                                        self.args.exponential_lr_gamma)
 
         elif self.args.optim == 'sgd':
             self.optimizer = optim.SGD(self.parameters(), lr=0, weight_decay=self.args.weight_decay,
@@ -38,6 +42,12 @@ class LocalLossBlock(nn.Module):
         elif self.args.optim == 'adam' or self.args.optim == 'amsgrad':
             self.optimizer = optim.Adam(self.parameters(), lr=0, weight_decay=self.args.weight_decay,
                                         amsgrad=self.args.optim == 'amsgrad')
+            if self.args.exponential_lr_scheduler:
+                self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, self.args.exponential_lr_gamma)
+
+    def lr_scheduler_step(self):
+        if not self.args.backprop and self.args.exponential_lr_scheduler:
+            self.scheduler.step()
 
     def local_loss_eval(self):
         self.local_eval = True
@@ -380,7 +390,7 @@ class LocalLossBlockConv(LocalLossBlock):
         if self.dropout_p > 0:
             self.dropout = torch.nn.Dropout2d(p=self.dropout_p, inplace=False)
         self.select_optimizer()
-        #self.print_grads()
+        # self.print_grads()
         self.clear_stats()
 
     def calc_loss_sup(self, Rh, h, y, y_onehot):
@@ -505,6 +515,8 @@ class LocalLossBlockConv(LocalLossBlock):
                     loss = self.calc_combined_loss(x, Rh, h, y, y_onehot)
                     # Single-step back-propagation
                     if self.training:
+                        if math.isnan(loss):
+                            print(loss)
                         loss.backward(retain_graph=self.args.no_detach)
 
                     # Update weights in this layer and detach computational graph

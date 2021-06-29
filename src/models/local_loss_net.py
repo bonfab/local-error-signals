@@ -42,6 +42,10 @@ class LocalLossNet(nn.Module):
         for layer in self.iter_local_loss_layers():
             layer.optim_step()
 
+    def lr_scheduler_step(self):
+        for layer in self.iter_local_loss_layers():
+            layer.lr_scheduler_step()
+
     def forward(self, x, y=None, y_onehot=None):
 
         assert not (y is None or y_onehot is None) or self.local_eval

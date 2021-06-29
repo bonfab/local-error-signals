@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
 
+from models.local_loss_net import LocalLossNet
 from utils.data import to_one_hot
 from models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
 from utils.logging import get_logger, get_csv_logger, retire_logger
@@ -37,6 +38,9 @@ class Trainer:
         else:
             raise ValueError(f'Unknown optimizer {cfg.optim}')
         self.model.set_learning_rate(cfg.lr)
+
+        if self.cfg.exponential_lr_scheduler:
+            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, self.cfg.exponential_lr_gamma)
 
         if cfg.gpus:
             self.model.cuda()
@@ -195,6 +199,10 @@ class Trainer:
             self.csv_logger.info(f'{epoch},'
                                  f'{train_loss_local},{train_loss_global},{train_acc/100},'
                                  f'{valid_loss_local},{valid_loss_global},{valid_acc/100}')
+            if self.cfg.exponential_lr_scheduler:
+                self.scheduler.step()
+                if isinstance(self.model, LocalLossNet):
+                    self.model.lr_scheduler_step()
             self.save_checkpoint(epoch, self.model, self.optimizer)
 
         retire_logger(self.csv_logger)

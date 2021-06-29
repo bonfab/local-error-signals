@@ -3,9 +3,9 @@ from functools import reduce
 from torch import nn
 from operator import mul
 
+import utils.models as utils
 from .local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
 from .local_loss_net import LocalLossNet
-import utils.models as utils
 
 
 class FullyConnectedNet(LocalLossNet):
