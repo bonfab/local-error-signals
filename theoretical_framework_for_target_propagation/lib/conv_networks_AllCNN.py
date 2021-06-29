@@ -506,8 +506,11 @@ class DDTPPureConvAllCNNC(nn.Module):
                            stride=1, padding=0, dilation=1, groups=1,
                            bias=bias, padding_mode='zeros',
                            initialization=initialization,
+                           pool_type='max', pool_kernel_size=(6,6),
+                           pool_stride=(1, 1), pool_padding=0, pool_dilation=1,
                            forward_activation=hidden_activation,
                            feedback_activation=feedback_activation)
+        
         
         
         self._layers = nn.ModuleList([l1, l2, l3, l4, l5, l6, l7, l8, l9])
