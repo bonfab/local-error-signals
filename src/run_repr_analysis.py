@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 # Select the network to evaluate here
 
-model = utils.models.load_best_model_from_exp_dir("./2021-06-18_12-50-30/1")
+model, _ = utils.models.load_best_model_from_exp_dir("./2021-06-18_12-50-30/1")
 
 #model = cnnc.AllCNNC()
 #model.load_state_dict(torch.load('theoretical_framework_for_target_propagation/results/pure_backprop/weights_backprop.pth',map_location=torch.device('cpu')))
