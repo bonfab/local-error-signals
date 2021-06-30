@@ -8,6 +8,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from models.local_loss_net import LocalLossNet
+from src.optimizers.sam import SAM
 from utils.data import to_one_hot
 from models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
 from utils.logging import get_logger, get_csv_logger, retire_logger
@@ -29,18 +30,9 @@ class Trainer:
         self.train_set = train_set
         self.valid_set = valid_set
 
-        if cfg.optim == 'sgd':
-            self.optimizer = optim.SGD(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay,
-                                       momentum=cfg.momentum)
-        elif cfg.optim == 'adam' or cfg.optim == 'amsgrad':
-            self.optimizer = optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay,
-                                        amsgrad=cfg.optim == 'amsgrad')
-        else:
-            raise ValueError(f'Unknown optimizer {cfg.optim}')
-        self.model.set_learning_rate(cfg.lr)
 
-        if self.cfg.exponential_lr_scheduler:
-            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, self.cfg.exponential_lr_gamma)
+        self.model.set_learning_rate(cfg.lr)
+        self.select_optimizer()
 
         if cfg.gpus:
             self.model.cuda()
@@ -58,6 +50,27 @@ class Trainer:
             worker_init_fn=lambda worker_id: np.random.seed(
                  self.cfg.seed + worker_id),
             **kwargs)
+
+    def select_optimizer(self):
+        if self.cfg.sam:
+            if self.cfg.sam:
+                if self.cfg.optim == 'sgd':
+                    self.optimizer = SAM(self.model.parameters(), optim.SGD, lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
+                                         momentum=self.cfg.momentum)
+                elif self.cfg.optim == 'adam' or self.cfg.optim == 'amsgrad':
+                    self.optimizer = SAM(self.model.parameters(), optim.Adam, lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
+                                         amsgrad=self.cfg.optim == 'amsgrad')
+                if self.cfg.exponential_lr_scheduler:
+                    self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer.base_optimizer,
+                                                                            self.cfg.exponential_lr_gamma)
+        elif self.cfg.optim == 'sgd':
+            self.optimizer = optim.SGD(self.model.parameters(), lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
+                                       momentum=self.cfg.momentum)
+        elif self.cfg.optim == 'adam' or self.cfg.optim == 'amsgrad':
+            self.optimizer = optim.Adam(self.model.parameters(), lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
+                                        amsgrad=self.cfg.optim == 'amsgrad')
+        else:
+            raise ValueError(f'Unknown optimizer {self.cfg.optim}')
 
     def trainiter(self):
 
@@ -100,7 +113,14 @@ class Trainer:
             # Backward pass and optimizer step
             # For local loss functions, this will only affect output layer
             loss.backward()
-            self.optimizer.step()
+            if self.cfg.sam:
+                self.optimizer.first_step(zero_grad=True)
+                self.model.local_loss_eval()
+                F.cross_entropy(self.model(data), target).backward()
+                self.optimizer.second_step()
+                self.model.local_loss_train()
+            else:
+                self.optimizer.step()
 
             # If special option for no detaching is set, update weights also in hidden layers
             if self.cfg.no_detach:

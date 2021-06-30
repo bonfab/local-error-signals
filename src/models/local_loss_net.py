@@ -25,6 +25,9 @@ class LocalLossNet(nn.Module):
         else:
             return super(LocalLossNet, self).parameters()
 
+    def get_last_trainable_layer(self):
+        return self.layers[-1].get_last_trainable()
+
     def iter_local_loss_layers(self):
         for layer in self.layers:
             if isinstance(layer, LocalLossBlock) or isinstance(layer, LocalLossNet):

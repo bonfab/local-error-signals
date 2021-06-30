@@ -7,7 +7,6 @@ from torch import optim
 import torch.nn.functional as F
 from optimizers.sam import SAM
 import utils.models as utils
-#from utils.models import similarity_matrix, LinearFAFunction, LinearFA, find_zero_grads
 
 
 class LocalLossBlock(nn.Module):
@@ -307,6 +306,8 @@ class LocalLossBlockLinear(LocalLossBlock):
             return h_return, loss
 
         else:
+            if self.training:
+                h_return.detach_()
             return h_return
 
 
@@ -531,4 +532,6 @@ class LocalLossBlockConv(LocalLossBlock):
             return h_return, loss
 
         else:
+            if self.training:
+                h_return.detach_()
             return h_return

@@ -47,6 +47,8 @@ class AllCNNTail(LocalLossNet):
         else:
             return nn.Module.parameters(self)
 
+    def get_last_trainable_layer(self):
+        return self.layers[2].parameters()
 
 class AllCNN(LocalLossNet):
     """
