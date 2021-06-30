@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats
-import utils
+import evaluation.utils as utils
 
 # check if ipywidgets is installed before importing tqdm.auto
 # to ensure it won't fail and a progress bar is displayed

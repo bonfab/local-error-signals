@@ -147,12 +147,15 @@ def load_model_params(model, path, cpu):
 
 def load_best_model_from_exp_dir(exp_dir, cpu=not torch.cuda.is_available()):
     exp_cfg = OmegaConf.create(load_experiment_cfg(os.path.join(exp_dir, ".hydra", "config.yaml")))
-    adjust_cfg(exp_cfg)
+    OmegaConf.set_struct(exp_cfg, False)
     if cpu:
         exp_cfg.train.gpus = 0
         exp_cfg.model.loss.gpus = 0
+    exp_cfg.train.sam = {}
+    exp_cfg.train.sam.active = False # for backwards compatibility
+    adjust_cfg(exp_cfg)
     model = get_model(exp_cfg.model)
     checkpoint_index = find_best_checkpoint_index(os.path.join(exp_dir, "training_results.csv"))
     params_path = os.path.join(exp_dir, "checkpoints", f"{checkpoint_index}.pt")
     load_model_params(model, params_path, not exp_cfg.train.gpus)
-    return model
+    return model, exp_cfg

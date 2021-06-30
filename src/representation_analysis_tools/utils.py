@@ -80,15 +80,15 @@ def flatten_activations(activations):
     return activations
 
 
-def compute_from_activations(activations, metric_fn, already_computed_layers=None):
-    computed_layers = {}
+def compute_from_activations(activations, metric_fn, already_computed_layers=None, **kwargs):
+    computed_layers = collections.OrderedDict()
 
     #if not isinstance(activations.get(list(activations.keys())[0]), np.ndarray):
     #    activations = flatten_activations(activations)
     for name, acts in activations.items():
-        computed_layers[name] = metric_fn(acts)
+        computed_layers[name] = metric_fn(acts, **kwargs)
 
-    if already_computed_layers:
+    if already_computed_layers is not None:
         already_computed_layers.update(computed_layers)
     else:
         already_computed_layers = computed_layers
@@ -97,7 +97,7 @@ def compute_from_activations(activations, metric_fn, already_computed_layers=Non
 
 
 def separate_data_names(computed_metric):
-    computed_metric_separate = {}
+    computed_metric_separate = collections.OrderedDict()
     for act_kind, computed_metric_inner in computed_metric.items():
         if act_kind.data_name not in computed_metric_separate:
             computed_metric_separate[act_kind.data_name] = {}
