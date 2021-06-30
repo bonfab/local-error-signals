@@ -8,7 +8,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from models.local_loss_net import LocalLossNet
-from src.optimizers.sam import SAM
+from optimizers.sam import SAM
 from utils.data import to_one_hot
 from models.local_loss_blocks import LocalLossBlockLinear, LocalLossBlockConv
 from utils.logging import get_logger, get_csv_logger, retire_logger
