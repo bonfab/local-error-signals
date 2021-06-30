@@ -18,11 +18,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from evaluation.utils import track_activations
-import evaluation.intrinsic_dimension as id
-import evaluation.rsa as rsa
-import evaluation.utils as utils
-import evaluation.logs as logs
-# import wandb
+import representation_analysis_tools.intrinsic_dimension as id
+import representation_analysis_tools.rsa as rsa
+import representation_analysis_tools.utils as utils
+import representation_analysis_tools.centered_kernel_alignment as cka
 
 
 class Evaluation:
@@ -39,17 +38,20 @@ class Evaluation:
         self.batch_size = cfg.batch_size
 
         self.data_set = data_set
+        set_seed(self.cfg.seed)
         self.data_loader = torch.utils.data.DataLoader(self.data_set, batch_size=self.batch_size,
-                                                       shuffle=True, num_workers=cfg.data_loader_workers,
+                                                       shuffle=True, num_workers=0,
                                                        worker_init_fn=lambda worker_id: np.random.seed(
                                                            self.cfg.seed + worker_id)
                                                        )
-
-        self.classes = ('plane', 'car', 'bird', 'cat',
-                        'deer', 'dog', 'frog', 'horse',
-                        'ship', 'truck')
-
         self.criterion = nn.CrossEntropyLoss()
+
+        self.activations = OrderedDict()
+
+        if isinstance(self.model, LocalLossNet):
+            self.named_modules = self.model.get_base_inference_layers()
+        else:
+            self.named_modules = list(self.model.named_modules())[1:]
 
     def plot_ide(self, ide_layers):
 
@@ -63,103 +65,127 @@ class Evaluation:
         fig = dim_plot.get_figure()
         fig.savefig(self.cfg.ide.plot_save_path)
 
-    def plot_rsa(self, rsa_layers):
+    def ide_analysis(self):
+        ide_layers = utils.compute_from_activations(self.activations, id.computeID, nres=self.cfg.ide.nres,
+                                                    fraction=self.cfg.ide.fraction, verbose=False)
+        """for name, acts in self.activations.items():
+            mean, _ = id.computeID(acts, nres=self.cfg.ide.nres, fraction=self.cfg.ide.fraction, verbose=False)
+            self.ide_layers[name[2]] += mean
+            self.ide_layers[name[2]] = self.ide_layers[name[2]] / 2"""
 
-        print(len(rsa_layers))
-        matrix = np.zeros((32, 32))
+        ide_layers_df = pd.DataFrame({
+            'layer': ide_layers.keys(),
+            'dimension': ide_layers.values()
+        })
+        ide_layers_df.to_csv(self.cfg.ide.csv_save_path, index=False)
 
-        for i in range(32):
-            for j in range(i, 32):
-                matrix[i][j] = utils.cos_similarity(rsa_layers[i], rsa_layers[j])
-                matrix[j][i] = matrix[i][j]
+        if self.cfg.plot:
+            self.plot_ide(ide_layers_df)
 
-        plt.imshow(matrix, cmap="bwr", origin="lower")
-        plt.colorbar()
-        plt.grid("off")
-        plt.xlabel("Network activations")
-        plt.ylabel("Network activations")
-        save_path = 'rsa_matrix.png'
+        del ide_layers_df, ide_layers
+
+    def plot_rdms(self, corr_dist):
+
+        fig, ax = plt.subplots(1, 1)
+        img = ax.imshow(corr_dist['test'][1])
+        x_label_list = [x[2] for x in corr_dist['test'][0]]
+
+        ax.set_xticks([x for x in range(len(corr_dist['test'][0]))])
+        ax.set_yticks([x for x in range(len(corr_dist['test'][0]))])
+        ax.set_xticklabels(x_label_list)
+        ax.set_yticklabels(x_label_list)
+
+        plt.xticks(rotation=45)
+        fig.colorbar(img)
+        # save_path = 'correlation_matrix_{}_{}.png'.format(model_name[0], model_name[1])
+        save_path = 'correlation_matrix.png'
         plt.savefig(save_path)
         plt.show()
+
+    def rmds_analysis(self):
+        input_rdms = rsa.input_rdms_from_activations(self.activations)
+        input_rdms = utils.separate_data_names(input_rdms)
+        corr_dist = rsa.corr_dist_of_input_rdms(input_rdms)
+        del input_rdms
+        #mdm_embedding = utils.repr_dist_embedding(corr_dist)
+
+        if self.cfg.plot:
+            self.plot_rdms(corr_dist)
+
+        del corr_dist
+
+    def plot_cka(self, linear_cka_dist_mat):
+
+        fig, ax = plt.subplots(1, 1)
+        img = ax.imshow(linear_cka_dist_mat['test'][1])
+        x_label_list = [x[2] for x in linear_cka_dist_mat['test'][0]]
+
+        ax.set_xticks([x for x in range(len(linear_cka_dist_mat['test'][0]))])
+        ax.set_yticks([x for x in range(len(linear_cka_dist_mat['test'][0]))])
+        ax.set_xticklabels(x_label_list)
+        ax.set_yticklabels(x_label_list)
+
+        plt.xticks(rotation=45)
+        fig.colorbar(img)
+        # save_path = 'linear_cka_matrix_{}_{}.png'.format(model_name[0], model_name[1])
+        save_path = 'linear_cka_matrix.png'
+        plt.savefig(save_path)
+        plt.show()
+
+    def cka_outer_analysis(self):
+        outer_prod_triu_arrays = cka.outer_product_triu_array_from_activations(self.activations)
+        outer_prod_triu_arrays_seprated = utils.separate_data_names(outer_prod_triu_arrays)
+        del outer_prod_triu_arrays
+        linear_cka_dist_mat = cka.matrix_of_linear_cka(outer_prod_triu_arrays_seprated)
+        del outer_prod_triu_arrays_seprated
+        # linear_cka_embedding = utils.repr_dist_embedding(linear_cka_dist_mat)
+
+        if self.cfg.plot:
+            self.plot_cka(linear_cka_dist_mat)
 
     def evaluate(self):
 
         set_seed(self.cfg.seed)
 
-        print('Load the weights...')
-
-        # self.model.load_state_dict(torch.load(self.model_path))
-
         running_loss = 0.0
         total = 0.0
         correct = 0.0
 
-        activations = OrderedDict()
-        ide_layers = OrderedDict()
-        input_rdms = OrderedDict()
-        rsa_layers = OrderedDict()
-
-        # wandb.init(entity="NI-Project", project="local-error")
-
         print('Starting evaluation')
 
-        if isinstance(self.model, LocalLossNet):
-            named_modules = self.model.get_base_inference_layers()
-        else:
-            named_modules = list(self.model.named_modules())[1:]
+        trackingflag = utils.TrackingFlag(True, "all-cnn", "test", None)
 
-        trackingflag = utils.TrackingFlag(True, None, None, None)
-        for name in named_modules:
-            ide_layers[name[0]] = 0.
-            rsa_layers[name[0]] = 0.
+        for i, (inputs, labels) in enumerate(self.data_loader, 0):
 
-        with torch.no_grad():
-            for i, data in enumerate(self.data_loader, 0):
+            activations_, handles = utils.track_activations(self.named_modules, trackingflag)
 
-                activations_, handles = utils.track_activations(named_modules, trackingflag)
-
-                inputs, labels = data
+            with torch.no_grad():
                 outputs = self.model(inputs)
-                loss = self.criterion(outputs, labels)
-                _, predicted = outputs.max(1)
-                total += labels.size(0)
-                correct += predicted.eq(labels).sum().item()
-                acc = 100. * correct / total
+            loss = self.criterion(outputs, labels)
+            _, predicted = outputs.max(1)
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
+            acc = 100. * correct / total
+            running_loss += loss.item()
 
-                activations.update(activations_)
-                activations = utils.flatten_activations(activations)
+            self.activations.update(activations_)
+            self.activations = utils.flatten_activations(self.activations)
 
-                for handle in handles:
-                    handle.remove()
+            for handle in handles:
+                handle.remove()
 
-                for name, acts in activations.items():
+            if self.cfg.ide.calculate:
+                self.ide_analysis()
 
-                    if self.cfg.ide.calculate:
-                        mean, _ = id.computeID(acts, nres=self.cfg.ide.nres, fraction=self.cfg.ide.fraction, verbose=False)
-                        ide_layers[name[2]] += mean
-                        ide_layers[name[2]] = ide_layers[name[2]] / 2
+            if self.cfg.rsa.calculate:
+                self.rmds_analysis()
 
-                    rsa_layers[name[2]] = (rsa.correlation_matrix(acts))
+            if self.cfg.cka.calculate:
+                self.cka_outer_analysis()
 
-                activations = {}
-                running_loss += loss.item()
+            print('Finished evaluation')
 
-                running_loss = 0.0
-
-                ide_layers_df = pd.DataFrame({
-                    'layer': ide_layers.keys(),
-                    'dimension': ide_layers.values()
-                })
-                ide_layers_df.to_csv(self.cfg.ide.csv_save_path, index=False)
-
-                print('Finished evaluation')
-
-                if self.cfg.plot:
-                    if self.cfg.ide.calculate:
-                        self.plot_ide(ide_layers_df)
-                    self.plot_rsa(rsa_layers)
-
-                return
+            return
 
 
 if __name__ == "__main__":
@@ -171,7 +197,6 @@ if __name__ == "__main__":
         "batch_size": 500,
         "num_classes": 10,
         "seed": 1234,
-        "data_loader_workers": 3,
         "plot": True,
         "show_plot": True,
         "ide": {
@@ -182,7 +207,10 @@ if __name__ == "__main__":
             "plot_save_path": 'internal_dimensions.png'
         },
         "rsa": {
-            "calculate": True,
+            "calculate": True
+        },
+        "cka": {
+            "calculate": True
         }
 
     })
