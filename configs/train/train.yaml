@@ -1,8 +1,8 @@
 # @package _group_
 gpus: 0
-lr: 0.005
-exponential_lr_scheduler: True
-exponential_lr_gamma: 0.9
+lr: 0.001
+lr_scheduler: True
+lr_gamma: 0.9
 epochs: 2
 batch_size: 16
 optim: adam

@@ -36,8 +36,8 @@ class LocalLossBlock(nn.Module):
                                      lr=0, weight_decay=self.args.weight_decay,
                                      amsgrad=self.args.optim == 'amsgrad')
             if self.args.lr_scheduler:
-                self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer.base_optimizer,
-                                                                 self.args.lr_gamma)
+                self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer.base_optimizer, step_size=1,
+                                                                 gamma=self.args.lr_gamma)
 
         elif self.args.optim == 'sgd':
             self.optimizer = optim.SGD(self.parameters(), lr=0, weight_decay=self.args.weight_decay,
