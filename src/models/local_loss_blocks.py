@@ -6,8 +6,8 @@ import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
 from optimizers.sam import SAM
-
-from utils.models import similarity_matrix, LinearFAFunction, LinearFA, find_zero_grads
+import utils.models as utils
+#from utils.models import similarity_matrix, LinearFAFunction, LinearFA, find_zero_grads
 
 
 class LocalLossBlock(nn.Module):
@@ -19,7 +19,7 @@ class LocalLossBlock(nn.Module):
 
     def print_grads(self):
         for name, module in self.named_modules():
-            module.register_backward_hook(find_zero_grads(name))
+            module.register_backward_hook(utils.find_zero_grads(name))
 
     def select_optimizer(self):
         if self.args.backprop:
@@ -88,7 +88,7 @@ class LocalLossBlock(nn.Module):
     def calc_loss_unsup(self, x, Rh, h):
 
         if self.args.loss_unsup == 'sim':
-            Rx = similarity_matrix(x, self.args.no_similarity_std).detach()
+            Rx = utils.similarity_matrix(x, self.args.no_similarity_std).detach()
             loss_unsup = F.mse_loss(Rh, Rx)
         elif self.args.loss_unsup == 'recon' and not self.first_layer:
             x_hat = self.nonlin(self.decoder_x(h))
@@ -177,7 +177,7 @@ class LocalLossBlockLinear(LocalLossBlock):
             self.decoder_x = nn.Linear(num_out, num_in, bias=True)
         if not args.backprop and (args.loss_sup == 'pred' or args.loss_sup == 'predsim'):
             if args.bio:
-                self.decoder_y = LinearFA(num_out, args.target_proj_size)
+                self.decoder_y = utils.LinearFA(num_out, args.target_proj_size)
             else:
                 self.decoder_y = nn.Linear(num_out, num_classes)
             self.decoder_y.weight.data.zero_()
@@ -202,9 +202,9 @@ class LocalLossBlockLinear(LocalLossBlock):
     def calc_loss_sup(self, Rh, h, y, y_onehot):
         if self.args.loss_sup == 'sim':
             if self.args.bio:
-                Ry = similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
+                Ry = utils.similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
             else:
-                Ry = similarity_matrix(y_onehot, self.args.no_similarity_std).detach()
+                Ry = utils.similarity_matrix(y_onehot, self.args.no_similarity_std).detach()
             loss_sup = F.mse_loss(Rh, Ry)
             if not self.no_print_stats:
                 self.loss_sim += loss_sup.item() * h.size(0)
@@ -224,12 +224,12 @@ class LocalLossBlockLinear(LocalLossBlock):
         elif self.args.loss_sup == 'predsim':
             y_hat_local = self.decoder_y(h.view(h.size(0), -1))
             if self.args.bio:
-                Ry = similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
+                Ry = utils.similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
                 float_type = torch.cuda.FloatTensor if self.args.gpus else torch.FloatTensor
                 y_onehot_pred = self.proj_y(y_onehot).gt(0).type(float_type).detach()
                 loss_pred = (1 - self.args.beta) * F.binary_cross_entropy_with_logits(y_hat_local, y_onehot_pred)
             else:
-                Ry = similarity_matrix(y_onehot, self.args.no_similarity_std).detach()
+                Ry = utils.similarity_matrix(y_onehot, self.args.no_similarity_std).detach()
                 loss_pred = (1 - self.args.beta) * F.cross_entropy(y_hat_local, y.detach())
             loss_sim = self.args.beta * F.mse_loss(Rh, Ry)
             loss_sup = loss_pred + loss_sim
@@ -266,7 +266,7 @@ class LocalLossBlockLinear(LocalLossBlock):
                 h_loss = h
             else:
                 h_loss = self.linear_loss(h)
-            Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
+            Rh = utils.similarity_matrix(h_loss, self.args.no_similarity_std)
 
         return Rh
 
@@ -368,7 +368,7 @@ class LocalLossBlockConv(LocalLossBlock):
                 self.avg_pool = None
         if not args.backprop and (args.loss_sup == 'pred' or args.loss_sup == 'predsim'):
             if args.bio:
-                self.decoder_y = LinearFA(dim_in_decoder, args.target_proj_size)
+                self.decoder_y = utils.LinearFA(dim_in_decoder, args.target_proj_size)
             else:
                 self.decoder_y = nn.Linear(dim_in_decoder, num_classes)
             self.decoder_y.weight.data.zero_()
@@ -396,9 +396,9 @@ class LocalLossBlockConv(LocalLossBlock):
     def calc_loss_sup(self, Rh, h, y, y_onehot):
         if self.args.loss_sup == 'sim':
             if self.args.bio:
-                Ry = similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
+                Ry = utils.similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
             else:
-                Ry = similarity_matrix(y_onehot, self.args.no_similarity_std).detach()
+                Ry = utils.similarity_matrix(y_onehot, self.args.no_similarity_std).detach()
             loss_sup = F.mse_loss(Rh, Ry)
             if not self.no_print_stats:
                 self.loss_sim += loss_sup.item() * h.size(0)
@@ -422,12 +422,12 @@ class LocalLossBlockConv(LocalLossBlock):
                 h = self.avg_pool(h)
             y_hat_local = self.decoder_y(h.view(h.size(0), -1))
             if self.args.bio:
-                Ry = similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
+                Ry = utils.similarity_matrix(self.proj_y(y_onehot), self.args.no_similarity_std).detach()
                 float_type = torch.cuda.FloatTensor if self.args.gpus else torch.FloatTensor
                 y_onehot_pred = self.proj_y(y_onehot).gt(0).type(float_type).detach()
                 loss_pred = (1 - self.args.beta) * F.binary_cross_entropy_with_logits(y_hat_local, y_onehot_pred)
             else:
-                Ry = similarity_matrix(y_onehot, self.args.no_similarity_std).detach()
+                Ry = utils.similarity_matrix(y_onehot, self.args.no_similarity_std).detach()
                 loss_pred = (1 - self.args.beta) * F.cross_entropy(y_hat_local, y.detach())
             loss_sim = self.args.beta * F.mse_loss(Rh, Ry)
             loss_sup = loss_pred + loss_sim
@@ -490,7 +490,7 @@ class LocalLossBlockConv(LocalLossBlock):
                     h_loss = self.avg_pool(h_loss)
             else:
                 h_loss = self.conv_loss(h)
-            Rh = similarity_matrix(h_loss, self.args.no_similarity_std)
+            Rh = utils.similarity_matrix(h_loss, self.args.no_similarity_std)
 
         return Rh
 

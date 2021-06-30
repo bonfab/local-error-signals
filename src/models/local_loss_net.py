@@ -1,6 +1,6 @@
 from torch import nn
 from .local_loss_blocks import LocalLossBlock
-from utils.models import ViewLayer
+import utils.models as utils
 
 
 class LocalLossNet(nn.Module):
@@ -68,14 +68,6 @@ class LocalLossNet(nn.Module):
 
     def get_base_inference_layers(self):
 
-        """layers = []
-        for name, module in self._modules.items():
-            try:
-                layers + [(f"{name}." + x, y) for x, y in module.get_base_inference_layers()]
-            except:
-                if not isinstance(module, ViewLayer):
-                    layers.append((module))"""
-
         blocked_modules = []
         layers = []
 
@@ -86,7 +78,7 @@ class LocalLossNet(nn.Module):
             if isinstance(module, LocalLossBlock):
                 blocked_modules += [m[1] for m in module.named_modules()][2:]
 
-            if len(list(module.children())) == 0 and not isinstance(module, ViewLayer) and module not in blocked_modules:
+            if len(list(module.children())) == 0 and not isinstance(module, utils.ViewLayer) and module not in blocked_modules:
                 layers.append(named_module)
 
         return layers
