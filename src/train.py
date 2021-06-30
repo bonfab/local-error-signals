@@ -55,10 +55,14 @@ class Trainer:
         if self.cfg.sam:
             if self.cfg.sam:
                 if self.cfg.optim == 'sgd':
-                    self.optimizer = SAM(self.model.parameters(), optim.SGD, lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
+                    self.optimizer = SAM(self.model.parameters(), optim.SGD,
+                                         rho=self.cfg.sam.rho, adaptive=self.cfg.sam.adaptive,
+                                         lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
                                          momentum=self.cfg.momentum)
                 elif self.cfg.optim == 'adam' or self.cfg.optim == 'amsgrad':
-                    self.optimizer = SAM(self.model.parameters(), optim.Adam, lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
+                    self.optimizer = SAM(self.model.parameters(), optim.Adam,
+                                         rho=self.cfg.sam.rho, adaptive=self.cfg.sam.adaptive,
+                                         lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
                                          amsgrad=self.cfg.optim == 'amsgrad')
                 if self.cfg.exponential_lr_scheduler:
                     self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer.base_optimizer,
@@ -113,7 +117,7 @@ class Trainer:
             # Backward pass and optimizer step
             # For local loss functions, this will only affect output layer
             loss.backward()
-            if self.cfg.sam:
+            if self.cfg.sam.active:
                 self.optimizer.first_step(zero_grad=True)
                 self.model.local_loss_eval()
                 F.cross_entropy(self.model(data), target).backward()

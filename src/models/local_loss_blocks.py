@@ -26,10 +26,14 @@ class LocalLossBlock(nn.Module):
 
         if self.args.sam:
             if self.args.optim == 'sgd':
-                self.optimizer = SAM(self.parameters(), optim.SGD, lr=0, weight_decay=self.args.weight_decay,
+                self.optimizer = SAM(self.parameters(), optim.SGD,
+                                     rho=self.args.sam.rho, adaptive=self.args.sam.adaptive,
+                                     lr=0, weight_decay=self.args.weight_decay,
                                      momentum=self.args.momentum)
             elif self.args.optim == 'adam' or self.args.optim == 'amsgrad':
-                self.optimizer = SAM(self.parameters(), optim.Adam, lr=0, weight_decay=self.args.weight_decay,
+                self.optimizer = SAM(self.parameters(), optim.Adam,
+                                     rho=self.args.sam.rho, adaptive=self.args.sam.adaptive,
+                                     lr=0, weight_decay=self.args.weight_decay,
                                      amsgrad=self.args.optim == 'amsgrad')
             if self.args.exponential_lr_scheduler:
                 self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer.base_optimizer,
@@ -281,7 +285,7 @@ class LocalLossBlockLinear(LocalLossBlock):
 
                 Rh = self.calculate_similarity_matrix(h)
 
-                if self.args.sam:
+                if self.args.sam.active:
                     loss = self.step_sam(x, Rh, h, y, y_onehot)
                     if self.training and not self.args.no_detach:
                         h_return.detach_()
@@ -507,7 +511,7 @@ class LocalLossBlockConv(LocalLossBlock):
 
                 Rh = self.calculate_similarity_matrix(h)
 
-                if self.args.sam:
+                if self.args.sam.active:
                     loss = self.step_sam(x, Rh, h, y, y_onehot)
                     if self.training and not self.args.no_detach:
                         h_return.detach_()
