@@ -24,7 +24,7 @@ class LocalLossBlock(nn.Module):
         if self.args.backprop:
             return
 
-        if self.args.sam:
+        if self.args.sam.active:
             if self.args.optim == 'sgd':
                 self.optimizer = SAM(self.parameters(), optim.SGD,
                                      rho=self.args.sam.rho, adaptive=self.args.sam.adaptive,
