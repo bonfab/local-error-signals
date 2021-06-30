@@ -63,9 +63,9 @@ class Trainer:
                                      rho=self.cfg.sam.rho, adaptive=self.cfg.sam.adaptive,
                                      lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
                                      amsgrad=self.cfg.optim == 'amsgrad')
-            if self.cfg.exponential_lr_scheduler:
-                self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer.base_optimizer,
-                                                                        self.cfg.exponential_lr_gamma)
+            if self.cfg.lr_scheduler:
+                self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer.base_optimizer,
+                                                                 self.cfg.lr_gamma)
         elif self.cfg.optim == 'sgd':
             self.optimizer = optim.SGD(self.model.parameters(), lr=self.cfg.lr, weight_decay=self.cfg.weight_decay,
                                        momentum=self.cfg.momentum)
