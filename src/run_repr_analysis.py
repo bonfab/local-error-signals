@@ -1,7 +1,7 @@
 # To add a new cell, type '# %%'
 # To add a new markdown cell, type '# %% [markdown]'
 # %%
-from lib.conv_networks_AllCNN import DDTPConvAllCNNC
+#from lib.conv_networks_AllCNN import DDTPConvAllCNNC
 import sys
 import argparse
 import random
@@ -25,15 +25,15 @@ from torch.utils.data import Subset
 from torchvision import datasets, transforms
 from functools import partial
 from pathlib import Path
-
-from utils.models import load_best_model_from_exp_dir
+from models.local_loss_blocks import LocalLossBlock
+from models.local_loss_net import LocalLossNet
+import utils.models
 
 import matplotlib.pyplot as plt
 
 # Select the network to evaluate here
 
-
-model = load_best_model_from_exp_dir("2021-06-18_12-50-30/0")
+model = utils.models.load_best_model_from_exp_dir("../2021-06-18_12-50-30/2")
 
 # %%
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
@@ -150,9 +150,8 @@ modules_ = list(model.named_modules())[2:]
 modules = modules_
 activations_, handles = repr_utils.track_activations(modules, trackingflag)
 
-model.local_eval = True
-for layer in model.layers:
-    layer.local_eval = True
+if isinstance(model, LocalLossNet) or isinstance(model, LocalLossBlock):
+    model.local_loss_eval()
 
 model.eval()
 
