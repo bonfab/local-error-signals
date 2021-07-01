@@ -3,7 +3,6 @@ defaults:
     - train: train.yaml
     - model: allcnn.yaml
     - dataset: cifar10.yaml
-    - evaluation: ide.yaml
     - hydra: default.yaml
 
 logging_level: debug

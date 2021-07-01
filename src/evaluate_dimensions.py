@@ -1,6 +1,7 @@
 import os.path
 from collections import OrderedDict
 
+import hydra
 from omegaconf import OmegaConf
 
 from models.local_loss_net import LocalLossNet
@@ -30,7 +31,7 @@ class Evaluation:
     def __init__(self, cfg, models, model_names, data_set, data_set_name="CIFAR-10"):
 
         self.cfg = cfg
-        self.models = [(model, name) for model, name in zip(models, model_names)]
+        self.models_names = [(model, name) for model, name in zip(models, model_names)]
 
         self.num_classes = cfg.num_classes
         self.batch_size = cfg.batch_size
@@ -47,7 +48,7 @@ class Evaluation:
 
         self.activations = {}
         self.named_modules = {}
-        for model in self.models:
+        for model in self.models_names:
 
             model[0].eval()
             if isinstance(model[0], LocalLossNet) or isinstance(model[0], LocalLossBlock):
@@ -75,7 +76,7 @@ class Evaluation:
 
         save_dir = os.path.join(self.cfg.save_dir, "ide")
         os.makedirs(save_dir, exist_ok=True)
-        for model in self.models:
+        for model in self.models_names:
             ide_layers = utils.compute_from_activations(self.activations[model], id.computeID, nres=self.cfg.ide.nres,
                                                         fraction=self.cfg.ide.fraction, verbose=False)
 
@@ -104,7 +105,8 @@ class Evaluation:
 
         plt.xticks(rotation=45)
         fig.colorbar(img)
-        save_path = os.path.join(self.cfg.save_dir, "rdms", 'correlation_matrix_{}_{}.png'.format(model_name1, model_name2))
+        save_path = os.path.join(self.cfg.save_dir, "rdms",
+                                 'correlation_matrix_{}_{}.png'.format(model_name1, model_name2))
         plt.savefig(save_path)
         plt.show()
 
@@ -112,9 +114,9 @@ class Evaluation:
 
         save_dir = os.path.join(self.cfg.save_dir, "rdms")
         os.makedirs(save_dir, exist_ok=True)
-        for i, model1 in enumerate(self.models):
-            for j in range(i+1, len(self.models)):
-                model2 = self.models[j]
+        for i, model1 in enumerate(self.models_names):
+            for j in range(i + 1, len(self.models_names)):
+                model2 = self.models_names[j]
                 input_rdms = rsa.input_rdms_from_activations(self.activations[model1])
                 input_rdms.update(rsa.input_rdms_from_activations(self.activations[model2]))
                 input_rdms = utils.separate_data_names(input_rdms)
@@ -139,7 +141,8 @@ class Evaluation:
 
         plt.xticks(rotation=45)
         fig.colorbar(img)
-        save_path = os.path.join(self.cfg.save_dir, "cka", 'linear_cka_matrix_{}_{}.png'.format(model_name1, model_name2))
+        save_path = os.path.join(self.cfg.save_dir, "cka",
+                                 'linear_cka_matrix_{}_{}.png'.format(model_name1, model_name2))
         plt.savefig(save_path)
         plt.show()
 
@@ -147,9 +150,9 @@ class Evaluation:
 
         save_dir = os.path.join(self.cfg.save_dir, "cka")
         os.makedirs(save_dir, exist_ok=True)
-        for i, model1 in enumerate(self.models):
-            for j in range(i+1, len(self.models)):
-                model2 = self.models[j]
+        for i, model1 in enumerate(self.models_names):
+            for j in range(i + 1, len(self.models_names)):
+                model2 = self.models_names[j]
                 outer_prod_triu_arrays = cka.outer_product_triu_array_from_activations(self.activations[model1])
                 outer_prod_triu_arrays.update(cka.outer_product_triu_array_from_activations(self.activations[model2]))
                 outer_prod_triu_arrays_seprated = utils.separate_data_names(outer_prod_triu_arrays)
@@ -174,7 +177,7 @@ class Evaluation:
 
         for i, (inputs, labels) in enumerate(self.data_loader, 0):
 
-            for model in self.models:
+            for model in self.models_names:
                 tracking_flag = utils.TrackingFlag(True, model[1], self.data_set_name, None)
                 activations_, handles = utils.track_activations(self.named_modules[model], tracking_flag)
 
@@ -196,7 +199,7 @@ class Evaluation:
             if self.cfg.ide.calculate:
                 self.ide_analysis()
 
-            if self.cfg.rsa.calculate:
+            if self.cfg.rmds.calculate:
                 self.rmds_analysis()
 
             if self.cfg.cka.calculate:
@@ -207,39 +210,14 @@ class Evaluation:
             return
 
 
-if __name__ == "__main__":
-    cfg = OmegaConf.create({
-        "data": {
-            "name": "CIFAR-10"
-        },
-        "model_dirs": ["../2021-06-18_12-50-30/0",
-                       "../2021-06-18_12-50-30/2",
-                       "../2021-06-18_12-50-30/3"],
-        "batch_size": 200,
-        "num_classes": 10,
-        "seed": 1234,
-        "plot": True,
-        "show_plot": True,
-        "save_dir": "../repr_analysis_results",
-        "ide": {
-            "calculate": True,
-            "nres": 3,
-            "fraction": 0.5,
-        },
-        "rsa": {
-            "calculate": True
-        },
-        "cka": {
-            "calculate": True
-        }
-
-    })
-
-    train_set, _ = get_datasets(cfg.data, "../data")
+@hydra.main(config_path="../configs/analysis", config_name="config.yaml")
+def main(cfg: OmegaConf):
+    OmegaConf.set_struct(cfg, False)
+    train_set, _ = get_datasets(cfg.dataset, cfg.data_dir)
     models = []
     names = []
-    for dirc in cfg.model_dirs:
-        model, params = load_best_model_from_exp_dir(dirc)
+    for direc in cfg.evaluation.model_dirs:
+        model, params = load_best_model_from_exp_dir(direc)
         models.append(model)
         if params.model.loss.backprop:
             name = params.model.name + "-backprop"
@@ -247,5 +225,9 @@ if __name__ == "__main__":
             name = params.model.name + "-" + params.model.loss.loss_sup
         names.append(name)
 
-    agent = Evaluation(cfg, models=models, model_names=names, data_set=train_set, data_set_name=cfg.data.name)
+    agent = Evaluation(cfg.evaluation, models=models, model_names=names, data_set=train_set, data_set_name=cfg.dataset.name)
     agent.evaluate()
+
+
+if __name__ == "__main__":
+    main()

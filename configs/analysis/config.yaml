@@ -1,0 +1,14 @@
+# default training configuration
+defaults:
+    - evaluation: representation.yaml
+    - dataset: cifar10.yaml
+    - hydra: default.yaml
+
+logging_level: debug
+
+work_dir: ${hydra:runtime.cwd}
+
+# path to folder with data
+data_dir: ${work_dir}/../data/
+
+

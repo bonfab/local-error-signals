@@ -12,7 +12,7 @@ from utils.configuration import adjust_cfg, set_seed
 from evaluate_dimensions import Evaluation
 
 
-@hydra.main(config_path="../configs", config_name="config.yaml")
+@hydra.main(config_path="../configs/training", config_name="config.yaml")
 def main(cfg: OmegaConf):
     OmegaConf.set_struct(cfg, False)
     set_seed(cfg.train.seed)
