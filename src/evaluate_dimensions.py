@@ -1,3 +1,4 @@
+import os.path
 from collections import OrderedDict
 
 from omegaconf import OmegaConf
@@ -68,10 +69,12 @@ class Evaluation:
         if self.cfg.show_plot:
             plt.show()
         fig = dim_plot.get_figure()
-        fig.savefig(f"ide_{model_name}")
+        fig.savefig(os.path.join(self.cfg.save_dir, "ide", f"ide_{model_name}.png"))
 
     def ide_analysis(self):
 
+        save_dir = os.path.join(self.cfg.save_dir, "ide")
+        os.makedirs(save_dir, exist_ok=True)
         for model in self.models:
             ide_layers = utils.compute_from_activations(self.activations[model], id.computeID, nres=self.cfg.ide.nres,
                                                         fraction=self.cfg.ide.fraction, verbose=False)
@@ -81,8 +84,7 @@ class Evaluation:
                 'dimension': [mean for (mean, variance) in ide_layers.values()],
                 'variance': [variance for (mean, variance) in ide_layers.values()]
             })
-
-            #ide_layers_df.to_csv(self.cfg.ide.csv_save_path, index=False)
+            ide_layers_df.to_csv(os.path.join(self.cfg.save_dir, "ide", f"{model[1]}-ide.csv"), index=False)
 
             if self.cfg.plot:
                 self.plot_ide(ide_layers_df, model[1])
@@ -102,12 +104,14 @@ class Evaluation:
 
         plt.xticks(rotation=45)
         fig.colorbar(img)
-        save_path = 'correlation_matrix_{}_{}.png'.format(model_name1, model_name2)
+        save_path = os.path.join(self.cfg.save_dir, "rdms", 'correlation_matrix_{}_{}.png'.format(model_name1, model_name2))
         plt.savefig(save_path)
         plt.show()
 
     def rmds_analysis(self):
 
+        save_dir = os.path.join(self.cfg.save_dir, "rdms")
+        os.makedirs(save_dir, exist_ok=True)
         for i, model1 in enumerate(self.models):
             for j in range(i+1, len(self.models)):
                 model2 = self.models[j]
@@ -135,12 +139,14 @@ class Evaluation:
 
         plt.xticks(rotation=45)
         fig.colorbar(img)
-        save_path = 'linear_cka_matrix_{}_{}.png'.format(model_name1, model_name2)
+        save_path = os.path.join(self.cfg.save_dir, "cka", 'linear_cka_matrix_{}_{}.png'.format(model_name1, model_name2))
         plt.savefig(save_path)
         plt.show()
 
     def cka_outer_analysis(self):
 
+        save_dir = os.path.join(self.cfg.save_dir, "cka")
+        os.makedirs(save_dir, exist_ok=True)
         for i, model1 in enumerate(self.models):
             for j in range(i+1, len(self.models)):
                 model2 = self.models[j]
@@ -214,12 +220,11 @@ if __name__ == "__main__":
         "seed": 1234,
         "plot": True,
         "show_plot": True,
+        "save_dir": "../repr_analysis_results",
         "ide": {
             "calculate": True,
             "nres": 3,
             "fraction": 0.5,
-            "csv_save_path": './internal_dimensions.csv',
-            "plot_save_path": 'internal_dimensions.png'
         },
         "rsa": {
             "calculate": True
