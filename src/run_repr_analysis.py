@@ -29,19 +29,44 @@ from models.local_loss_blocks import LocalLossBlock
 from models.local_loss_net import LocalLossNet
 import utils.models
 
-import theoretical_framework_for_target_propagation.AllCNNC_backprop as cnnc
 import matplotlib.pyplot as plt
 
-# Select the network to evaluate here
+'''
+In this script you need to specify the variables below. 
 
-model, _ = utils.models.load_best_model_from_exp_dir("./2021-06-18_12-50-30/1")
+1. subsample_test   :   fraction of the CIFAR10 testset to you use for the evaluation. My laptop can only handle 30% but maybe you can do
+                        even more
+2. model_name       :   the evaluation data will be stored in logs/similarity_metrics/<model_name>
+                        To plot the evaluation data you have to specify this model_name in the mlp_representations.py script
+3. model            :   Load the model with some model loader. Some possible loaders are outcommented below
+4. modules          :   The list of layers to be analysed. For the local error model use the model.get_base_inference_layers()
+                        For the target model use the list(model.named_modules())[1:] and del the 9th entry 
+'''
+# Select the network to evaluate here
+#1.
+subsample_test = 0.3
+
+#2.
+model_name = 'mlp_local_1'
+
+#3.
+# The imports for the target loss need to be changed. Maybe change the structure of the repository so the target stuff also is in the src folder
+
+#import theoretical_framework_for_target_propagation.AllCNNC_backprop as cnnc
 
 #model = cnnc.AllCNNC()
 #model.load_state_dict(torch.load('theoretical_framework_for_target_propagation/results/pure_backprop/weights_backprop.pth',map_location=torch.device('cpu')))
+model, _ = utils.models.load_best_model_from_exp_dir("../2021-06-18_12-50-30/1")
+
+#4.
+#modules = list(model.named_modules())[1:]
+#del modules[9]
+modules = model.get_base_inference_layers()
+
 
 # %%
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--model-name', type=str, default='mlp_normal',
+parser.add_argument('--model-name', type=str, default=model_name,
                     help='Name of the model (for logging).')
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training')
@@ -115,15 +140,11 @@ def gen_test_loader(dataset, batch_size=args.test_batch_size, **kwargs):
                                        **kwargs)
 
 
-train_set = datasets.CIFAR10('..../data', train=True, download=True)
+train_set = datasets.CIFAR10('../data', train=True, download=True)
 train_loader = gen_train_loader(train_set, **kwargs)
 
-test_set = datasets.CIFAR10('..../data', train=False)
+test_set = datasets.CIFAR10('../data', train=False)
 test_loader = gen_test_loader(test_set, **kwargs)
-
-# This is 30% of the testdataset. You can maybe increase this number, but my laptop crashes
-
-subsample_test = 0.3
 
 random.seed(1)
 
@@ -147,13 +168,6 @@ trackingflag.epoch = 0
 trackingflag.active = True
 trackingflag.data_name = 'test'
 
-#modules = list(model.named_modules())[1:]
-#del modules[9]
-modules = model.get_base_inference_layers()
-
-# TODO: Add a "filter" to select only the layers from the named_modules list which are relevant/comparable with the normal network
-
-#modules = modules_
 activations_, handles = repr_utils.track_activations(modules, trackingflag)
 
 if isinstance(model, LocalLossNet) or isinstance(model, LocalLossBlock):

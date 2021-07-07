@@ -11,8 +11,13 @@ import representation_analysis_tools.utils as repr_utils
 import representation_analysis_tools.centered_kernel_alignment as cka
 #%%
 
+'''
+In this script the plotting of the correlation and cka matrices and the ID is done. The data is loaded from the logs directory.
+Only the names of the models you want to compare need to be specified below.
+'''
+
 # Specify the two network to compare here
-model_name = ['normal', 'local_0']
+model_name = ['mlp_normal', 'mlp_local_1']
 
 recompute = False
 
@@ -62,7 +67,7 @@ ax.set_yticklabels(x_label_list)
 
 plt.xticks(rotation=45)
 fig.colorbar(img)
-save_path = 'correlation_matrix_{}_{}.png'.format(model_name[0],model_name[1])
+save_path = 'logs/plots/correlation_matrix_{}_{}.png'.format(model_name[0],model_name[1])
 plt.savefig(save_path)
 plt.show()
 
@@ -79,7 +84,7 @@ ax.set_yticklabels(x_label_list)
 
 plt.xticks(rotation=45)
 fig.colorbar(img)
-save_path = 'linear_cka_matrix_{}_{}.png'.format(model_name[0],model_name[1])
+save_path = 'logs/plots/linear_cka_matrix_{}_{}.png'.format(model_name[0],model_name[1])
 plt.savefig(save_path)
 plt.show()
 
@@ -93,29 +98,22 @@ for name, value in intrinsic_dims['test'].items():
     xs.append(name[2])
     ys.append(value[0])
 
-# Change this to the appropriate shape depending on the number of layers
-
-ys1 = ys[:19]
-ys2 = ys[19:]
-
+ys1, ys2 = ys[:10], ys[10:]
 fig, ax = plt.subplots()
 
-# Change it here as well 
-
-ax.plot(xs[:19], ys1[:19], label=model_name[0], c='r')
-ax.plot(xs[:19], ys2[:19], label=model_name[1], c='b')
-
+ax.plot(xs[:10], ys1[:10], label=model_name[0], c='r')
+ax.plot(xs[:10], ys2[:10], label=model_name[1], c='b')
 ax.set(xlabel='layer', ylabel='dimension')
 ax.legend(loc='upper left')
 ax.grid()
 plt.xticks(rotation=45)
-save_path = 'ID_normal_{}_{}.png'.format(model_name[0],model_name[1])
+save_path = 'logs/plots/ID_normal_{}_{}.png'.format(model_name[0],model_name[1])
 plt.savefig(save_path)
 plt.show()
 
 
 # Plot mdm embedding scatter plot
-
+'''
 xs = []
 ys = []
 for value in mdm_embedding:
@@ -134,6 +132,5 @@ plt.xticks(rotation=45)
 save_path = 'mdm_emb_coord_normal_local_1.png'
 plt.savefig(save_path)
 plt.show()
-
-# Plot cka embedded scatter plot.
+'''
 
