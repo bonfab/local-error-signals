@@ -17,7 +17,7 @@ Only the names of the models you want to compare need to be specified below.
 '''
 
 # Specify the two network to compare here
-model_name = ['mlp_normal', 'mlp_local_1']
+model_name = ['backprop', 'target_prop']
 
 recompute = False
 
@@ -69,7 +69,7 @@ plt.xticks(rotation=45)
 fig.colorbar(img)
 save_path = 'logs/plots/correlation_matrix_{}_{}.png'.format(model_name[0],model_name[1])
 plt.savefig(save_path)
-plt.show()
+#plt.show()
 
 # Plot the cka matrix
 
@@ -86,7 +86,7 @@ plt.xticks(rotation=45)
 fig.colorbar(img)
 save_path = 'logs/plots/linear_cka_matrix_{}_{}.png'.format(model_name[0],model_name[1])
 plt.savefig(save_path)
-plt.show()
+#plt.show()
 
 
 # Plot the Intrinsic Dimension
@@ -109,7 +109,7 @@ ax.grid()
 plt.xticks(rotation=45)
 save_path = 'logs/plots/ID_normal_{}_{}.png'.format(model_name[0],model_name[1])
 plt.savefig(save_path)
-plt.show()
+#plt.show()
 
 
 # Plot mdm embedding scatter plot
