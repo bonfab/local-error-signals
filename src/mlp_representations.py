@@ -9,6 +9,7 @@ import representation_analysis_tools.lazydict as lazydict
 import representation_analysis_tools.rsa as rsa
 import representation_analysis_tools.utils as repr_utils
 import representation_analysis_tools.centered_kernel_alignment as cka
+import copy
 #%%
 
 '''
@@ -17,7 +18,7 @@ Only the names of the models you want to compare need to be specified below.
 '''
 
 # Specify the two network to compare here
-model_name = ['backprop', 'target_prop']
+model_name = ['backprop_short', 'target_prop_short']
 
 recompute = False
 
@@ -30,7 +31,6 @@ for model_name_ in model_name:
     input_rdms.update(logs.load_similarity_metric("input_rdms", model_name_))
     intrinsic_dims.update(logs.load_similarity_metric("intrinsic_dims", model_name_))
     outer_prod_triu_arrays.update(logs.load_similarity_metric("outer_prod_triu_arrays", model_name_))
-
 
 #%%
 model_name_ = '' if isinstance(model_name, list) or len(model_name) == 1 else model_name
@@ -53,6 +53,7 @@ mdm_embedding = repr_utils.repr_dist_embedding(corr_dist)
 intrinsic_dims = repr_utils.separate_data_names(intrinsic_dims)
 #%%
 linear_cka_embedding = repr_utils.repr_dist_embedding(linear_cka_dist_mat)
+
 
 # Plot the correlation dist matrix
 
@@ -98,13 +99,15 @@ for name, value in intrinsic_dims['test'].items():
     xs.append(name[2])
     ys.append(value[0])
 
-ys1, ys2 = ys[:10], ys[10:]
+div = int(len(ys)/2)
+ys1, ys2 = ys[:div], ys[div:]
+
 fig, ax = plt.subplots()
 
-ax.plot(xs[:10], ys1[:10], label=model_name[0], c='r')
-ax.plot(xs[:10], ys2[:10], label=model_name[1], c='b')
+ax.plot(xs[:div], ys1, label=model_name[0], c='r')
+ax.plot(xs[:div], ys2, label=model_name[1], c='b')
 ax.set(xlabel='layer', ylabel='dimension')
-ax.legend(loc='upper left')
+ax.legend(loc='best')
 ax.grid()
 plt.xticks(rotation=45)
 save_path = 'logs/plots/ID_normal_{}_{}.png'.format(model_name[0],model_name[1])

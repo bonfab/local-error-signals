@@ -52,8 +52,8 @@ subsample_test = 0.3
 #2.
 #model_name = 'backprop_short'
 #model_name = 'target_prop_short'
-model_name = 'backprop'
-#model_name = 'target_prop'
+#model_name = 'backprop'
+model_name = 'target_prop'
 #3.
 # The imports for the target loss need to be changed. Maybe change the structure of the repository so the target stuff also is in the src folder
 
@@ -68,13 +68,13 @@ from AllCNNC_backprop import AllCNNC, AllCNNC_short_kernel
 #                                   map_location=torch.device('cpu')))
 
 # backprop
-model = AllCNNC()
-model.load_state_dict(torch.load('./logs/backprop_ACNNC/weights_backprop.pth',map_location=torch.device('cpu')))
+# model = AllCNNC()
+# model.load_state_dict(torch.load('./logs/backprop_ACNNC/weights_backprop.pth',map_location=torch.device('cpu')))
 
 '''models from theoretical framework paper'''
 # target_prop - DDTPPureConvAllCNNC
-#from allCNNC_main_last import args, load_network_w_weights
-#model = load_network_w_weights(args, "./logs/PureACNNC_.001_relu")
+from allCNNC_main_last import args, load_network_w_weights
+model = load_network_w_weights(args, "./logs/PureACNNC_.001_relu")
 
 # target_prop_short - DDTPPureShortCNNC_kernelmod
 # from allCNNC_main_pureshort import args, load_network_w_weights
@@ -90,7 +90,7 @@ model = model.to("cpu")
 #4.
 def every_second_targetprop(modules):
     modules = modules[2::2]
-    del modules[-1]
+    #del modules[-]
     return modules
 
 def remove_layer_backprop(modules):
@@ -100,8 +100,8 @@ def remove_layer_backprop(modules):
 
 '''short, backprop'''
 modules = list(model.named_modules())[1:]
-#modules = every_second_targetprop(modules)
-modules = remove_layer_backprop(modules)
+modules = every_second_targetprop(modules)
+#modules = remove_layer_backprop(modules)
 print(modules, len(modules))
 #modules = model.get_base_inference_layers()
 
