@@ -55,8 +55,8 @@ def matrix_of_linear_cka(features, from_outer_product_triu_array=True, verbose=T
             return linear_cka_mat[0, 1]
 
         linear_cka_mat = (linear_cka_mat + linear_cka_mat.T)/2.0
-
-        assert np.allclose(np.diag(linear_cka_mat), 1.)
+        print(np.diag(linear_cka_mat))
+        assert np.allclose(np.diag(linear_cka_mat), 1., rtol=1e-03)
         linear_cka_mat[np.diag_indices_from(linear_cka_mat)] = 1.0
 
         assert np.allclose(linear_cka_mat[linear_cka_mat > 1.], 1.0)
