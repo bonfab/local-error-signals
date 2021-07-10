@@ -137,6 +137,17 @@ def computeID(features, nres=1, fraction=1.0, fraction_linear_regr=1.0, verbose=
     nres: number of resamplings for error estimation
     fraction: fraction of data resampling for error estimation
     '''
+    ids = computeID_unagg(features, nres, fraction, fraction_linear_regr, verbose, dist)
+    mean = np.mean(ids)
+    error = np.std(ids)
+    return mean, error
+
+
+def computeID_unagg(features, nres=1, fraction=1.0, fraction_linear_regr=1.0, verbose=False, dist='euclidean'):
+    '''
+    nres: number of resamplings for error estimation
+    fraction: fraction of data resampling for error estimation
+    '''
     ids = []
     n = int(np.round(features.shape[0] * fraction))
     dist = squareform(pdist(features, dist))
@@ -146,16 +157,14 @@ def computeID(features, nres=1, fraction=1.0, fraction_linear_regr=1.0, verbose=
         dist_s = dist_s[perm, :]
         dist_s = dist_s[:, perm]
         ids.append(estimate(dist_s, fraction=fraction_linear_regr, verbose=verbose)[2])
-    mean = np.mean(ids)
-    error = np.std(ids)
-    return mean, error
+    return ids
 
 
 def computeIDfast(features, nres=1, fraction=1.0, fraction_linear_regr=1.0, verbose=False, dist='euclidean'):
     assert dist in ('euclidean', 'manhattan'), "Invalid distance. Change code to allow 'precomputed' metric."
     if dist == 'manhattan':
         p = 1
-    else: 
+    else:
         p = 2
 
     ids = []

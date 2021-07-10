@@ -40,12 +40,17 @@ def track_activations_labels(activations_labels, targets, tf):
 # TODO: implement RSA as forward hook
 # a dictionary that keeps saving the activations as they come
 def track_activations_(tf, differentiable=False):
-    activations = collections.defaultdict(list)
+    #activations = collections.defaultdict(list)
+    activations = collections.OrderedDict()
 
     def save_activation(name, mod, _, out):
         if tf.active:
             act_kind = ActivationKind(tf.model_name, tf.data_name, name, tf.epoch)
-            activations[act_kind].append(out.clone().detach().cpu())
+            try:
+                activations[act_kind].append(out.clone().detach().cpu())
+            except KeyError:
+                activations[act_kind] = [out.clone().detach().cpu()]
+
 
     def save_activation_diff(name, mod, inp, out):
         _ = mod

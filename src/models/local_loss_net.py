@@ -74,8 +74,6 @@ class LocalLossNet(nn.Module):
         blocked_modules = []
         layers = []
 
-        #print(len(list(self.named_modules())))
-
         for named_module in self.named_modules():
             module = named_module[1]
             if isinstance(module, LocalLossBlock):
