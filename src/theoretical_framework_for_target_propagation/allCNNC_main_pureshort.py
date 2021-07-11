@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import CIFAR10
 from torchvision.utils import save_image
-
+import io
 
 from lib.conv_networks_AllCNN import DDTPPureShortCNNC_DENSE, DDTPConvAllCNNC, DDTPPureConvAllCNNC, DDTPPureShortCNNC, DDTPPureShortCNNC_kernelmod
 from lib.conv_network import DDTPConvNetwork, DDTPConvNetworkCIFAR, DDTPConvNetworkCIFAR_CONV
@@ -122,7 +122,14 @@ args =  {'dataset': 'cifar10',
      'gn_damping_hpsearch': False,
      'save_nullspace_norm_ratio': False
      }
+class CPU_Unpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module == 'torch.storage' and name == '_load_from_bytes':
+            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
+        else: return super().find_class(module, name)
 
+...
+#contents = pickle.load(f) becomes...
 def load_network_w_weights(args, run_dir = "results/acnnc_1000_relu_Adam_Pure_lr.1"):
     
     # function to load the AllCNNC Network according to the definition and load presaved weights
@@ -147,7 +154,7 @@ def load_network_w_weights(args, run_dir = "results/acnnc_1000_relu_Adam_Pure_lr
 
     
     filename = os.path.normpath(os.path.join(run_dir, 'weights.pickle'))
-    forward_parameters_loaded = pickle.load( open(filename, 'rb'))
+    forward_parameters_loaded = CPU_Unpickler(open(filename, 'rb')).load()
     if len(net.layers) != len(forward_parameters_loaded)/2:
         print("the number of weights does not fit")
         return 

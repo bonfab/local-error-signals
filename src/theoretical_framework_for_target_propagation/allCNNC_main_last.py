@@ -11,6 +11,7 @@ import os
 import argparse
 import torch
 import torchvision
+import io
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -122,6 +123,11 @@ args =  {'dataset': 'cifar10',
      'gn_damping_hpsearch': False,
      'save_nullspace_norm_ratio': False
      }
+class CPU_Unpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module == 'torch.storage' and name == '_load_from_bytes':
+            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
+        else: return super().find_class(module, name)
 
 def load_network_w_weights(args, run_dir = "results/acnnc_1000_relu_Adam_Pure_lr.1"):
     
@@ -147,7 +153,7 @@ def load_network_w_weights(args, run_dir = "results/acnnc_1000_relu_Adam_Pure_lr
 
     
     filename = os.path.normpath(os.path.join(run_dir, 'weights.pickle'))
-    forward_parameters_loaded = pickle.load( open(filename, 'rb'))
+    forward_parameters_loaded = CPU_Unpickler(open(filename, 'rb')).load()
     if len(net.layers) != len(forward_parameters_loaded)/2:
         print("the number of weights does not fit")
         return 
