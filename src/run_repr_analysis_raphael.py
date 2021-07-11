@@ -48,12 +48,12 @@ In this script you need to specify the variables below.
 # Select the network to evaluate here
 #1.
 subsample_test = 0.3
-
+torch.set_default_tensor_type('torch.FloatTensor')
 #2.
 #model_name = 'backprop_short'
 #model_name = 'target_prop_short'
 #model_name = 'backprop'
-model_name = 'target_prop'
+model_name = 'target_propTEST'
 #3.
 # The imports for the target loss need to be changed. Maybe change the structure of the repository so the target stuff also is in the src folder
 
@@ -74,6 +74,8 @@ from AllCNNC_backprop import AllCNNC, AllCNNC_short_kernel
 '''models from theoretical framework paper'''
 # target_prop - DDTPPureConvAllCNNC
 from allCNNC_main_last import args, load_network_w_weights
+args["no_cuda"] = True
+args["no_cuda"]
 model = load_network_w_weights(args, "./logs/PureACNNC_.001_relu")
 
 # target_prop_short - DDTPPureShortCNNC_kernelmod
@@ -85,7 +87,7 @@ model = load_network_w_weights(args, "./logs/PureACNNC_.001_relu")
 #model, _ = utils.models.load_best_model_from_exp_dir("../2021-06-18_12-50-30/1")
 
 
-model = model.to("cpu")
+#model = model.to("cpu")
 
 #4.
 def every_second_targetprop(modules):

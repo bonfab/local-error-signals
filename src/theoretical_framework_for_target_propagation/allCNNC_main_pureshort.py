@@ -154,7 +154,7 @@ def load_network_w_weights(args, run_dir = "results/acnnc_1000_relu_Adam_Pure_lr
     for i in range(len(net.layers)):
         net.layers[i]._weights = forward_parameters_loaded[i*2]
         net.layers[i]._bias = forward_parameters_loaded[(i*2) + 1]
-    print(summary(net.cuda(), (3,32,32)))
+    #print(summary(net.cuda(), (3,32,32)))
     return net
 
 
