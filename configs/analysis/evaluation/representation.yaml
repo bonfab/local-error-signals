@@ -1,19 +1,16 @@
 # @package _group_
-"model_dirs":
-  - ${hydra:runtime.cwd}/../2021-06-18_12-50-30/0
-  - ${hydra:runtime.cwd}/../2021-06-18_12-50-30/2
-  - ${hydra:runtime.cwd}/../2021-06-18_12-50-30/3
-"batch_size": 200
-"num_classes": 10
-"seed": 1234
-"plot": True
-"show_plot": True
-"save_dir": ./repr_analysis_results
-"ide":
-  "calculate": True
-  "nres": 3
-  "fraction": 0.5
-"rmds":
-  "calculate": True
-"cka":
-  "calculate": True
+batch_size: 2400
+num_classes: 10
+seed: 1234
+plot: True
+show_plot: True
+save_dir: ./repr_analysis_results
+ide:
+  calculate: True
+  nres: 5
+  fraction: 0.5
+  plot_together: True
+rmds:
+  calculate: True
+cka:
+  calculate: True

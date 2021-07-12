@@ -2,6 +2,7 @@
 defaults:
     - evaluation: representation.yaml
     - dataset: cifar10.yaml
+    - models: model_paths.yaml
     - hydra: default.yaml
 
 logging_level: debug
