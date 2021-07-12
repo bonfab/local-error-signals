@@ -18,16 +18,16 @@ In this python file, the network classes for networks with direct feedback
 connections should be implemented.
 """
 
-from lib.direct_feedback_layers import DDTPRHLLayer, \
+from .direct_feedback_layers import DDTPRHLLayer, \
     DDTPMLPLayer, DDTPControlLayer
-from lib.networks import DTPNetwork, DTPDRLNetwork
+from .networks import DTPNetwork, DTPDRLNetwork
 import torch
 import torch.nn as nn
 import numpy as np
-from lib.utils import NetworkError
+from .utils import NetworkError
 import pandas as pd
 import warnings
-from lib import utils
+import utils
 
 
 

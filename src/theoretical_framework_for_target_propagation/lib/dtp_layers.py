@@ -22,7 +22,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 #from tensorboardX import SummaryWriter
-import lib.utils as utils
+import utils
 import warnings
 
 class DTPLayer(nn.Module):

@@ -21,11 +21,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 import warnings
-from lib.dtp_layers import DTPLayer
-from lib.dtpdrl_layers import DTPDRLLayer
+from .dtp_layers import DTPLayer
+from .dtpdrl_layers import DTPDRLLayer
 #from tensorboardX import SummaryWriter
-import lib.utils as utils
-from lib.utils import NetworkError
+import utils
+from .utils import NetworkError
 import pandas as pd
 import torch.nn.functional as F
 

@@ -16,11 +16,11 @@
 import torch
 from torch import nn
 import numpy as np
-from lib.networks import DTPNetwork
-from lib.conv_layers import DDTPConvLayer, DDTPConvControlLayer, DDTPConvLayerLast
-from lib.direct_feedback_layers import DDTPMLPLayer, DDTPControlLayer
+from .networks import DTPNetwork
+from .conv_layers import DDTPConvLayer, DDTPConvControlLayer, DDTPConvLayerLast
+from .direct_feedback_layers import DDTPMLPLayer, DDTPControlLayer
 import torch.nn.functional as F
-from lib import utils
+import utils
 import pandas as pd
 
 class DDTPConvNetwork(nn.Module):

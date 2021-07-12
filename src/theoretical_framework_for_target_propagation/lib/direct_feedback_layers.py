@@ -19,14 +19,14 @@ connections should be implemented.
 
 """
 
-from lib.dtp_layers import DTPLayer
-from lib.dtpdrl_layers import DTPDRLLayer
-from lib.networks import BPNetwork
+from .dtp_layers import DTPLayer
+from .dtpdrl_layers import DTPDRLLayer
+from .networks import BPNetwork
 import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from lib import utils
+import utils
 
 
 class DDTPRHLLayer(DTPDRLLayer):

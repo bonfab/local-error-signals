@@ -18,7 +18,7 @@ import torch.nn as nn
 from abc import ABC, abstractmethod
 import numpy as np
 #from tensorboardX import SummaryWriter
-from lib.dtp_layers import DTPLayer
+from .dtp_layers import DTPLayer
 import torch.nn.functional as F
 
 
