@@ -124,14 +124,9 @@ class Evaluation:
             list_ide_layers[i]['Model'] = self.models_names[i][1]
             if split_multiple:
                 nunique = list_ide_layers[i].Layer.nunique()
-                print(nunique)
                 if nunique in total_dfs.keys():
-                    print("old")
-                    print(total_dfs[nunique])
                     total_dfs[nunique] = total_dfs[nunique].append(list_ide_layers[i])
-                    print(total_dfs[nunique])
                 else:
-                    print("new")
                     total_dfs[nunique] = list_ide_layers[i]
             else:
                 if i > 0:
