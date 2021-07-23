@@ -24,9 +24,6 @@ def main(cfg: OmegaConf):
     trainer = Trainer(cfg.train, model, train_set, test_set, logger)
     trainer.fit()
     make_acc_plots("./training_results.csv")
-    model = load_best_model_from_exp_dir("./")
-    agent = Evaluation(cfg.evaluation, model=model, data_set=train_set)
-    agent.evaluate()
     retire_logger(logger)
     logging.shutdown()
 
