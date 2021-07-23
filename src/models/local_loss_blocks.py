@@ -78,11 +78,15 @@ class LocalLossBlock(nn.Module):
             return ''
 
     def set_learning_rate(self, lr):
+        if self.args.backprop:
+            return
         self.lr = lr
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.lr
 
     def optim_zero_grad(self):
+        if self.args.backprop:
+            return 
         self.optimizer.zero_grad()
 
     def optim_step(self):

@@ -13,6 +13,6 @@ checkpointing: True
 checkpoint_dir: checkpoints
 seed: 1234
 sam:
-  active: True
+  active: False
   rho: 0.5
   adaptive: True
