@@ -10,6 +10,7 @@ def adjust_cfg(cfg):
     cfg.model.loss['optim'] = cfg.train['optim']
     cfg.model.loss['weight_decay'] = cfg.train['weight_decay']
     cfg.model.loss['gpus'] = cfg.train['gpus']
+    cfg.model.loss['momentum'] = cfg.train['momentum']
     try:
         cfg.model.loss['sam'] = cfg.train['sam']
         cfg.model.loss['exponential_lr_scheduler'] = cfg.model.loss['exponential_lr_scheduler']
