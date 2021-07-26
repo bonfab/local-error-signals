@@ -9,6 +9,7 @@ ide:
   calculate: True
   nres: 5
   fraction: 0.5
+  ci: 95
   plot_together: True
 rmds:
   calculate: True

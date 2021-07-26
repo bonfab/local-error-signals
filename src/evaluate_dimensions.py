@@ -108,7 +108,7 @@ class Evaluation:
         plt.close()
         sns.set(rc={"figure.figsize": (11, 5)})
         sns.set_style("whitegrid", {'axes.grid': False})
-        dim_plot = sns.lineplot(data=ide_layers, x='Layer', y='Dimension', ci="sd", linewidth=2)
+        dim_plot = sns.lineplot(data=ide_layers, x='Layer', y='Dimension', ci=self.cfg.ide.ci, linewidth=2)
         plt.suptitle('Intrinsic Dimension of Network Layers', weight='bold')
         dim_plot.set(xlim=(0, ide_layers.Layer.nunique()-1))
         if self.cfg.show_plot:
@@ -155,7 +155,7 @@ class Evaluation:
                 palette = "colorblind"
             else:
                 palette = "Set2"
-            dim_plot = sns.lineplot(ax=axes[i], data=df, x='Layer', y='Dimension', ci="sd", hue='Model',
+            dim_plot = sns.lineplot(ax=axes[i], data=df, x='Layer', y='Dimension', ci=self.cfg.ide.ci, hue='Model',
                                         linewidth=2, palette=palette)
             axes[i].set_xlim(left=0, right=df.Layer.nunique() - 1)
             axes[i].legend(loc="lower left")
