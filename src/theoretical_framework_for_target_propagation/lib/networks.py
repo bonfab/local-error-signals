@@ -24,8 +24,8 @@ import warnings
 from .dtp_layers import DTPLayer
 from .dtpdrl_layers import DTPDRLLayer
 #from tensorboardX import SummaryWriter
-import utils
-from .utils import NetworkError
+import lib.utils as utils
+from lib.utils import NetworkError
 import pandas as pd
 import torch.nn.functional as F
 

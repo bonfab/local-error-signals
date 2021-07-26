@@ -19,26 +19,81 @@ from torchvision.datasets import CIFAR10
 from torchvision.utils import save_image
 import io
 
-from .lib.conv_networks_AllCNN import DDTPPureShortCNNC_DENSE, DDTPConvAllCNNC, DDTPPureConvAllCNNC, DDTPPureShortCNNC, DDTPPureShortCNNC_kernelmod
-from .lib.conv_network import DDTPConvNetwork, DDTPConvNetworkCIFAR, DDTPConvNetworkCIFAR_CONV
-from .lib.train import train
-from .lib import utils
-from .lib import builders
+from lib.conv_networks_AllCNN import DDTPPureShortCNNC_DENSE, DDTPConvAllCNNC, DDTPPureConvAllCNNC, DDTPPureShortCNNC, DDTPPureShortCNNC_kernelmod
+from lib.train import train
+from lib import utils
+from lib import builders
 import os.path
 import pickle
 
 network_name = "pure_short"
+
 # chose between: original, pure, pure_short
+#parameters:
+
+
+class CPU_Unpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module == 'torch.storage' and name == '_load_from_bytes':
+            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
+        else: return super().find_class(module, name)
+
+...
+#contents = pickle.load(f) becomes...
+def load_network_w_weights(args, run_dir = "results/acnnc_1000_relu_Adam_Pure_lr.1"):
+    
+    # function to load the AllCNNC Network according to the definition and load presaved weights
+    from torchsummary import summary
+    if type(args) != argparse.Namespace:
+        args = argparse.Namespace(**args)
+    forward_requires_grad = args.save_BP_angle or args.save_GN_angle or\
+                            args.save_GN_activations_angle or \
+                            args.save_BP_activations_angle or \
+                            args.save_GNT_angle or \
+                            args.network_type in ['GN', 'GN2'] or \
+                            args.output_space_plot_bp or \
+                            args.gn_damping_hpsearch or \
+                            args.save_nullspace_norm_ratio
+    net = DDTPPureShortCNNC_kernelmod(bias=not args.no_bias,
+                                        hidden_activation=args.hidden_activation,
+                                        feedback_activation=args.fb_activation,
+                                        initialization=args.initialization,
+                                        sigma=args.sigma,
+                                        plots=args.plots,
+                                        forward_requires_grad=forward_requires_grad)
 
     
-#parameters:
-args =  {'dataset': 'cifar10',
+    filename = os.path.normpath(os.path.join(run_dir, 'weights.pickle'))
+    forward_parameters_loaded = CPU_Unpickler(open(filename, 'rb')).load()
+    if len(net.layers) != len(forward_parameters_loaded)/2:
+        print("the number of weights does not fit")
+        return 
+    for i in range(len(net.layers)):
+        net.layers[i]._weights = forward_parameters_loaded[i*2]
+        net.layers[i]._bias = forward_parameters_loaded[(i*2) + 1]
+    #print(summary(net.cuda(), (3,32,32)))
+    return net
+
+
+if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(description='Give the seed.')
+    parser.add_argument('seed', type=int, 
+                        help='give seed')
+
+    seed_args = parser.parse_args()
+    seed = seed_args.seed
+    torch.manual_seed(seed)
+    import random
+    random.seed(seed)    
+
+    args =  {'dataset': 'cifar10',
      'num_train': 1000,
      'num_test': 1000,
      'num_val': 1000,
      'epochs': 100,
      'batch_size': 128,
-     'lr': "0.0001",
+     'lr': "0.001",
      'lr_fb': "0.0045157498494467095",     
      'target_stepsize': 0.015962099947441903,
      'optimizer': 'Adam',
@@ -102,7 +157,7 @@ args =  {'dataset': 'cifar10',
      'multiple_hpsearch': False,
      'double_precision': False,
      'evaluate': True,
-     'out_dir': 'logs/PureACNNC_.001_relu',
+     'out_dir': 'logs/PureACNNCshort{}'.format(seed),
      'save_logs': False,
      'save_BP_angle': False,
      'save_GN_angle': False,
@@ -122,50 +177,8 @@ args =  {'dataset': 'cifar10',
      'gn_damping_hpsearch': False,
      'save_nullspace_norm_ratio': False
      }
-class CPU_Unpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        if module == 'torch.storage' and name == '_load_from_bytes':
-            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
-        else: return super().find_class(module, name)
-
-...
-#contents = pickle.load(f) becomes...
-def load_network_w_weights(args, run_dir = "results/acnnc_1000_relu_Adam_Pure_lr.1"):
     
-    # function to load the AllCNNC Network according to the definition and load presaved weights
-    from torchsummary import summary
-    if type(args) != argparse.Namespace:
-        args = argparse.Namespace(**args)
-    forward_requires_grad = args.save_BP_angle or args.save_GN_angle or\
-                            args.save_GN_activations_angle or \
-                            args.save_BP_activations_angle or \
-                            args.save_GNT_angle or \
-                            args.network_type in ['GN', 'GN2'] or \
-                            args.output_space_plot_bp or \
-                            args.gn_damping_hpsearch or \
-                            args.save_nullspace_norm_ratio
-    net = DDTPPureShortCNNC_kernelmod(bias=not args.no_bias,
-                                        hidden_activation=args.hidden_activation,
-                                        feedback_activation=args.fb_activation,
-                                        initialization=args.initialization,
-                                        sigma=args.sigma,
-                                        plots=args.plots,
-                                        forward_requires_grad=forward_requires_grad)
-
     
-    filename = os.path.normpath(os.path.join(run_dir, 'weights.pickle'))
-    forward_parameters_loaded = CPU_Unpickler(open(filename, 'rb')).load()
-    if len(net.layers) != len(forward_parameters_loaded)/2:
-        print("the number of weights does not fit")
-        return 
-    for i in range(len(net.layers)):
-        net.layers[i]._weights = forward_parameters_loaded[i*2]
-        net.layers[i]._bias = forward_parameters_loaded[(i*2) + 1]
-    #print(summary(net.cuda(), (3,32,32)))
-    return net
-
-
-if __name__ == "__main__":
     args = argparse.Namespace(**args)
 
     batch_size = 128

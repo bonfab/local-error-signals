@@ -112,7 +112,14 @@ class AllCNNC_short_kernel(nn.Module):
         res = F.softmax(self.flatten(self.avg_layer(x)))
         return res
 if __name__ == "__main__":
+    network_name = "pure_short"
+    seed = 10
     
+    # chose between: original, pure, pure_short
+    torch.manual_seed(seed)
+    import random
+    random.seed(seed)    
+
     if device == "cuda":
                     
         torch.set_default_tensor_type('torch.cuda.FloatTensor')        
@@ -120,7 +127,7 @@ if __name__ == "__main__":
         torch.set_default_tensor_type('torch.FloatTensor') 
     
            
-    model = AllCNNC().to(device)
+    model = AllCNNC_short_kernel().to(device)
     from torchsummary import summary
     
     #print(summary(model, (3,32,32)))
