@@ -24,10 +24,10 @@ from .networks import DTPNetwork, DTPDRLNetwork
 import torch
 import torch.nn as nn
 import numpy as np
-from .utils import NetworkError
+from lib.utils import NetworkError
 import pandas as pd
 import warnings
-import utils
+import lib.utils as utils
 
 
 

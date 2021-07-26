@@ -16,11 +16,11 @@
 import torch
 from torch import nn
 import numpy as np
-from .networks import DTPNetwork
-from .conv_layers import DDTPConvLayer, DDTPConvControlLayer, DDTPConvLayerLast
-from .direct_feedback_layers import DDTPMLPLayer, DDTPControlLayer
+from lib.networks import DTPNetwork
+from lib.conv_layers import DDTPConvLayer, DDTPConvControlLayer
+from lib.direct_feedback_layers import DDTPMLPLayer, DDTPControlLayer
 import torch.nn.functional as F
-import utils
+from lib import utils
 import pandas as pd
 
 class DDTPConvNetwork(nn.Module):
@@ -100,7 +100,6 @@ class DDTPConvNetwork(nn.Module):
 
             self.nullspace_relative_norm = pd.DataFrame(
                 columns=[i for i in range(0, self._depth)])
-        print(self.layers)
 
     @property
     def depth(self):
@@ -158,7 +157,6 @@ class DDTPConvNetwork(nn.Module):
             loss (nn.Module): output loss of the network
             target_lr: the learning rate for computing the output target based
                 on the gradient of the loss w.r.t. the output layer
-
         Returns: Mini-batch of output targets
         """
         output_activations = self.layers[-1].activations
@@ -176,9 +174,7 @@ class DDTPConvNetwork(nn.Module):
         Args:
             h_target (torch.Tensor): the output target
             i: the layer index to which the target must be propagated
-
         Returns: the target for layer i
-
         """
         output_activation = self.layers[-1].activations
         layer_activation = self.layers[i].activations
@@ -193,17 +189,13 @@ class DDTPConvNetwork(nn.Module):
                                                   self.layers[-2].activations)
         if save_target:
             self.layers[-1].target = output_target
-        print(self.depth)
-        print(self.layers)
-        for i in range(self.depth-1): # changed this from self.dept
-            print(self.layers[i])
+        for i in range(self.depth - 1):
             h_target = self.propagate_backward(output_target, i)
             if save_target:
                 self.layers[i].target = h_target
             if i == 0:
-                self.layers[i].compute_forward_gradients(h_target, self.input, # warum self.input/previous activations?
+                self.layers[i].compute_forward_gradients(h_target, self.input,
                                                          self.forward_requires_grad)
-
             else:
                 previous_activations = self.layers[i - 1].activations
                 if i == self.nb_conv:  # flatten conv layer
@@ -230,9 +222,8 @@ class DDTPConvNetwork(nn.Module):
         parameterlist = []
         for layer in self.layers:
             parameterlist.append(layer.weights)
-            #if layer.bias is not None:
-            # now always saves also the biases
-            parameterlist.append(layer.bias)
+            if layer.bias is not None:
+                parameterlist.append(layer.bias)
         return parameterlist
 
     def get_feedback_parameter_list(self):
@@ -290,11 +281,9 @@ class DDTPConvNetwork(nn.Module):
                 network should be retained after computing the gradients or
                 jacobians. If the graph will not be used anymore for the current
                 minibatch afterwards, retain_graph should be False.
-
         Returns (tuple): Tuple containing the angle in degrees between the
             updates for the forward weights at index 0 and the forward bias
             at index 1 (if bias is not None).
-
         """
         bp_gradients = self.layers[i].compute_bp_update(loss,
                                                         retain_graph)
@@ -493,74 +482,6 @@ class DDTPConvNetworkCIFAR(DDTPConvNetwork):
             self.nullspace_relative_norm = pd.DataFrame(
                 columns=[i for i in range(0, self._depth)])
 
-class DDTPConvNetworkCIFAR_CONV(DDTPConvNetwork):
-    def __init__(self, bias=True, hidden_activation='tanh',
-                 feedback_activation='linear', initialization='xavier_normal',
-                 sigma=0.1, plots=None,
-                 forward_requires_grad=False):
-        nn.Module.__init__(self)
-        l1 = DDTPConvLayer(3, 32, (5, 5), 10, [32, 16, 16],
-                           stride=1, padding=2, dilation=1, groups=1,
-                           bias=bias, padding_mode='zeros',
-                           initialization=initialization,
-                           pool_type='max', pool_kernel_size=(3, 3),
-                           pool_stride=(2, 2), pool_padding=1, pool_dilation=1,
-                           forward_activation=hidden_activation,
-                           feedback_activation=feedback_activation)
-        l2 = DDTPConvLayer(32, 64, (5, 5), 10, [64, 8, 8],
-                           stride=1, padding=2, dilation=1, groups=1,
-                           bias=bias, padding_mode='zeros',
-                           initialization=initialization,
-                           pool_type='max', pool_kernel_size=(3, 3),
-                           pool_stride=(2, 2), pool_padding=1, pool_dilation=1,
-                           forward_activation=hidden_activation,
-                           feedback_activation=feedback_activation)
-        l3 = DDTPConvLayer(64, 64, (8, 8), 10, [64, 1, 1],
-                           stride=1, padding=0, dilation=1, groups=1,
-                           bias=bias, padding_mode='zeros',
-                           initialization=initialization,
-                           pool_type='max', pool_kernel_size=(1, 1),
-                           pool_stride=(1,1), pool_padding=0, pool_dilation=1,
-                           forward_activation=hidden_activation,
-                           feedback_activation=feedback_activation)
-        l4 = DDTPConvLayerLast(64, 10, (1, 1), 10, [10,1,1],
-                           stride=1, padding=0, dilation=1, groups=1,
-                           bias=bias, padding_mode='zeros',
-                           initialization=initialization,
-                           pool_type='max', pool_kernel_size=(1, 1),
-                           pool_stride=(1,1), pool_padding=0, pool_dilation=1,
-                           forward_activation=hidden_activation,
-                           feedback_activation=feedback_activation)        
-        self._layers = nn.ModuleList([l1, l2, l3, l4])
-        self._depth = 4
-        self.nb_conv = 4
-        self._input = None
-        self._sigma = sigma
-        self._forward_requires_grad = forward_requires_grad
-
-        self._plots = plots
-        if plots is not None:
-            self.bp_angles = pd.DataFrame(
-                columns=[i for i in range(0, self._depth)])
-            self.gn_angles = pd.DataFrame(
-                columns=[i for i in range(0, self._depth)])
-            self.gnt_angles = pd.DataFrame(
-                columns=[i for i in range(0, self._depth)])
-            self.bp_activation_angles = pd.DataFrame(
-                columns=[i for i in range(0, self._depth)])
-            self.gn_activation_angles = pd.DataFrame(
-                columns=[i for i in range(0, self._depth)])
-
-            self.reconstruction_loss_init = pd.DataFrame(
-                columns=[i for i in range(0, self._depth)])
-            self.reconstruction_loss = pd.DataFrame(
-                columns=[i for i in range(0, self._depth)])
-
-            self.nullspace_relative_norm = pd.DataFrame(
-                columns=[i for i in range(0, self._depth)])
-
-
-
 
 class BPConvNetwork(nn.Module):
     def __init__(self, bias=True, hidden_activation='tanh',
@@ -731,9 +652,3 @@ class DDTPConvControlNetworkCIFAR(DDTPConvNetworkCIFAR):
 
             self.nullspace_relative_norm = pd.DataFrame(
                 columns=[i for i in range(0, self._depth)])
-
-
-
-
-
-
