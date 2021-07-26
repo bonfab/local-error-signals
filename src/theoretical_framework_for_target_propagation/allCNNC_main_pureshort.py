@@ -19,10 +19,10 @@ from torchvision.datasets import CIFAR10
 from torchvision.utils import save_image
 import io
 
-from lib.conv_networks_AllCNN import DDTPPureShortCNNC_DENSE, DDTPConvAllCNNC, DDTPPureConvAllCNNC, DDTPPureShortCNNC, DDTPPureShortCNNC_kernelmod
-from lib.train import train
-from lib import utils
-from lib import builders
+from .lib.conv_networks_AllCNN import DDTPPureShortCNNC_DENSE, DDTPConvAllCNNC, DDTPPureConvAllCNNC, DDTPPureShortCNNC, DDTPPureShortCNNC_kernelmod
+from .lib.train import train
+from .lib import utils
+#from lib import builders
 import os.path
 import pickle
 

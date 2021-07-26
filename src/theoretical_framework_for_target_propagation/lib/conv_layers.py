@@ -17,7 +17,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-import lib.utils as utils
+import utils
 import warnings
 
 class DDTPPureConvLayer(nn.Module):

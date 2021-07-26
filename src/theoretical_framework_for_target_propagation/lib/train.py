@@ -29,8 +29,8 @@ import matplotlib.pyplot as plt
 #from tensorboardX import SummaryWriter
 import pandas as pd
 
-import lib.utils as utils
-from lib.networks import LeeDTPNetwork, DTPNetwork
+import utils
+#from lib.networks import LeeDTPNetwork, DTPNetwork
 import pickle
 
 def train(args, device, train_loader, net, writer, test_loader, summary,
