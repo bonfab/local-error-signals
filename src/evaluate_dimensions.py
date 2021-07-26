@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 from models.local_loss_net import LocalLossNet
 from models.local_loss_blocks import LocalLossBlock
 from models import AllCNN
-from src.utils.logging import get_unique_save_path
+from utils.logging import get_unique_save_path
 from theoretical_framework_for_target_propagation.lib.conv_networks_AllCNN import DDTPPureConvAllCNNC, \
     DDTPPureShortCNNC_kernelmod
 from theoretical_framework_for_target_propagation.AllCNNC_backprop import AllCNNC_short_kernel
