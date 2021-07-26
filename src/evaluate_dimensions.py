@@ -9,6 +9,7 @@ from omegaconf import OmegaConf
 from models.local_loss_net import LocalLossNet
 from models.local_loss_blocks import LocalLossBlock
 from models import AllCNN
+from utils.logging import get_unique_save_path
 from theoretical_framework_for_target_propagation.lib.conv_networks_AllCNN import DDTPPureConvAllCNNC, \
     DDTPPureShortCNNC_kernelmod
 from theoretical_framework_for_target_propagation.AllCNNC_backprop import AllCNNC_short_kernel
@@ -107,13 +108,14 @@ class Evaluation:
         plt.close()
         sns.set(rc={"figure.figsize": (11, 5)})
         sns.set_style("whitegrid", {'axes.grid': False})
-        dim_plot = sns.lineplot(data=ide_layers, x='Layer', y='Dimension', ci="sd", linewidth=2)
+        dim_plot = sns.lineplot(data=ide_layers, x='Layer', y='Dimension', ci=self.cfg.ide.ci, linewidth=2)
         plt.suptitle('Intrinsic Dimension of Network Layers', weight='bold')
         dim_plot.set(xlim=(0, ide_layers.Layer.nunique()-1))
         if self.cfg.show_plot:
             plt.show()
         fig = dim_plot.get_figure()
-        fig.savefig(os.path.join(save_dir, f"ide_{model_name}.png"))
+        save_path = get_unique_save_path(os.path.join(save_dir, f"ide_{model_name}.png"))
+        fig.savefig(save_path)
 
     def plot_together(self, list_ide_layers, save_dir, plot_pool=True, split_multiple=True):
 
@@ -140,14 +142,20 @@ class Evaluation:
                 total_dfs[key] = df[~df.Layer.str.contains("pool")]
 
         print(total_dfs)
+        print(len(total_dfs.values()))
         fig, axes = plt.subplots(1, len(total_dfs.values()))
+        try:
+            iter(axes)
+        except TypeError:
+            axes = [axes]
+        print(axes)
         sns.set(rc={"figure.figsize": (10, 6)})
         for i, df in enumerate(total_dfs.values()):
             if i % 2 == 1:
                 palette = "colorblind"
             else:
                 palette = "Set2"
-            dim_plot = sns.lineplot(ax=axes[i], data=df, x='Layer', y='Dimension', ci="sd", hue='Model',
+            dim_plot = sns.lineplot(ax=axes[i], data=df, x='Layer', y='Dimension', ci=self.cfg.ide.ci, hue='Model',
                                         linewidth=2, palette=palette)
             axes[i].set_xlim(left=0, right=df.Layer.nunique() - 1)
             axes[i].legend(loc="lower left")
@@ -177,7 +185,8 @@ class Evaluation:
                 'Dimension': list(chain.from_iterable([ids for ids in ide_layers.values()]))
             }))
             ide_layers_dfs[-1]['Model'] = model[1]
-            ide_layers_dfs[i].to_csv(os.path.join(csv_dir, f"{model[1]}_ide.csv"), index=False)
+            save_path = get_unique_save_path(os.path.join(csv_dir, f"{model[1]}_ide.csv"))
+            ide_layers_dfs[i].to_csv(save_path, index=False)
             if self.cfg.plot:
                 self.plot_ide(ide_layers_dfs[i], model[1], plot_dir)
 
@@ -218,8 +227,8 @@ class Evaluation:
         plt.suptitle(f"Correlation of layers\n{model_name1} - {model_name2}", weight="bold")
         plt.tight_layout()
         plt.show()
-        save_path = os.path.join(save_dir,
-                                 '{}_{}_rdms.png'.format(model_name1, model_name2))
+        save_path = get_unique_save_path(os.path.join(save_dir,
+                                 '{}_{}_rdms.png'.format(model_name1, model_name2)))
         plt.savefig(save_path)
 
     def make_dist_df(self, dist_matrix, model_name1, model_name2):
@@ -253,7 +262,8 @@ class Evaluation:
                 del input_rdms
 
                 corr_df = self.make_dist_df(corr_dist, model1[1], model2[1])
-                corr_df.to_csv(os.path.join(csv_dir, f"{model1[1]}_{model2[1]}_rdms.csv"), index=False)
+                save_path = get_unique_save_path(os.path.join(csv_dir, f"{model1[1]}_{model2[1]}_rdms.csv"))
+                corr_df.to_csv(save_path, index=False)
                 if self.cfg.plot:
                     self.plot_rdms(corr_df, model1[1], model2[1], plot_dir)
 
@@ -292,8 +302,8 @@ class Evaluation:
         plt.suptitle(f"CKA of layers:\n{model_name1} - {model_name2}", weight="bold")
         plt.tight_layout()
         plt.show()
-        save_path = os.path.join(save_dir,
-                                 '{}_{}_cka.png'.format(model_name1, model_name2))
+        save_path = get_unique_save_path(os.path.join(save_dir,
+                                 '{}_{}_cka.png'.format(model_name1, model_name2)))
         plt.savefig(save_path)
 
     def cka_outer_analysis(self):
@@ -311,7 +321,8 @@ class Evaluation:
                 del outer_prod_triu_arrays_seprated
                 # linear_cka_embedding = utils.repr_dist_embedding(linear_cka_dist_mat)
                 cka_dist_df = self.make_dist_df(linear_cka_dist_mat, model1[1], model2[1])
-                cka_dist_df.to_csv(os.path.join(csv_dir, f"{model1[1]}_{model2[1]}_cka.csv"))
+                save_path = get_unique_save_path(os.path.join(csv_dir, f"{model1[1]}_{model2[1]}_cka.csv"))
+                cka_dist_df.to_csv(save_path, index=False)
                 if self.cfg.plot:
                     self.plot_cka(cka_dist_df, model1[1], model2[1], plot_dir)
                 del linear_cka_dist_mat
@@ -347,12 +358,15 @@ class Evaluation:
                 for handle in handles:
                     handle.remove()
 
+            print("Starting IDE")
             if self.cfg.ide.calculate:
                 self.ide_analysis()
 
+            print("Starting RSA")
             if self.cfg.rmds.calculate:
                 self.rmds_analysis()
 
+            print("Starting CKA")
             if self.cfg.cka.calculate:
                 self.cka_outer_analysis()
 
@@ -368,6 +382,8 @@ def main(cfg: OmegaConf):
     models = []
     names = [
         "Full Backprop (A1)",
+        "Full Backprop (A1)",
+        "Prediction & Similarity Local Loss (B)",
         "Prediction & Similarity Local Loss (B)",
         "Full Backprop Short (A2)",
         "Target Propagation Short (C)"

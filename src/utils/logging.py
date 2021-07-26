@@ -1,4 +1,5 @@
 import logging
+import os
 
 
 def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
@@ -54,3 +55,21 @@ def retire_logger(logger):
             pass
     logger.handlers.clear()
     del logger
+
+
+def get_unique_save_path(path):
+
+    split = path.split(".")
+    if len(split) < 1:
+        og_path = path
+        og_end = ""
+    else:
+        og_path = ".".join(split[:-1])
+        og_end = f".{split[-1]}"
+    i = 1
+
+    while os.path.exists(path):
+        path = og_path + f"-{i}" + og_end
+        i += 1
+
+    return path
