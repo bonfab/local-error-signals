@@ -113,7 +113,7 @@ class AllCNNC_short_kernel(nn.Module):
         return res
 if __name__ == "__main__":
     network_name = "pure_short"
-    seed = 10
+    seed = 42
     
     # chose between: original, pure, pure_short
     torch.manual_seed(seed)
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         torch.set_default_tensor_type('torch.FloatTensor') 
     
            
-    model = AllCNNC_short_kernel().to(device)
+    model = AllCNNC().to(device)
     from torchsummary import summary
     
     #print(summary(model, (3,32,32)))
