@@ -36,6 +36,54 @@ import representation_analysis_tools.utils as utils
 import representation_analysis_tools.centered_kernel_alignment as cka
 
 
+def plot_rdms(corr_df, model_name1, model_name2, save_dir, save_name=None):
+
+    plt.close()
+    mask = np.zeros_like(corr_df)
+    mask[np.triu_indices_from(mask)] = True
+    mask = np.logical_xor(mask, np.identity(mask.shape[0]))
+    """submask = np.zeros((int(mask.shape[0] / 2), int(mask.shape[1] / 2)))
+    submask[np.triu_indices_from(submask)] = True
+    submask = np.logical_xor(submask, np.identity(submask.shape[0]))
+    mask[int(mask.shape[0] / 2):, :int(mask.shape[1] / 2)] = submask"""
+    # print(mask)
+    ax = sns.heatmap(corr_df, mask=mask)
+    #ax.set_title(f"(A) {model_name1} - (B) {model_name2}")
+    plt.suptitle(f"RSA of layers\n{model_name1} - {model_name2}", weight="bold")
+    plt.tight_layout()
+    plt.show()
+    if save_name is None:
+        save_path = os.path.join(save_dir, '{}_{}_rdms.png'.format(model_name1, model_name2))
+    else:
+        save_path = os.path.join(save_dir, save_name)
+    save_path = get_unique_save_path(save_path)
+
+    plt.savefig(save_path)
+
+
+def plot_cka(cka_dist_df, model_name1, model_name2, save_dir, save_name=None):
+
+    plt.close()
+    mask = np.zeros_like(cka_dist_df)
+    mask[np.triu_indices_from(mask)] = True
+    mask = np.logical_xor(mask, np.identity(mask.shape[0]))
+    # submask = np.zeros((int(mask.shape[0] / 2), int(mask.shape[1] / 2)))
+    # submask[np.triu_indices_from(submask)] = True
+    # submask = np.logical_xor(submask, np.identity(submask.shape[0]))
+    # mask[int(mask.shape[0] / 2):, :int(mask.shape[1] / 2)] = submask
+    # print(mask)
+    ax = sns.heatmap(cka_dist_df, mask=mask)
+    plt.suptitle(f"CKA of layers:\n{model_name1} - {model_name2}", weight="bold")
+    plt.tight_layout()
+    plt.show()
+    if save_name is None:
+        save_path = os.path.join(save_dir, '{}_{}_cka.png'.format(model_name1, model_name2))
+    else:
+        save_path = os.path.join(save_dir, save_name)
+    save_path = get_unique_save_path(save_path)
+    plt.savefig(save_path)
+
+
 class Evaluation:
 
     def __init__(self, cfg, models, model_names, data_set, data_set_name="CIFAR-10"):
@@ -211,26 +259,6 @@ class Evaluation:
         plt.savefig(save_path)
         plt.show()
 
-    def plot_rdms(self, corr_df, model_name1, model_name2, save_dir):
-
-        plt.close()
-        mask = np.zeros_like(corr_df)
-        mask[np.triu_indices_from(mask)] = True
-        mask = np.logical_xor(mask, np.identity(mask.shape[0]))
-        """submask = np.zeros((int(mask.shape[0] / 2), int(mask.shape[1] / 2)))
-        submask[np.triu_indices_from(submask)] = True
-        submask = np.logical_xor(submask, np.identity(submask.shape[0]))
-        mask[int(mask.shape[0] / 2):, :int(mask.shape[1] / 2)] = submask"""
-        # print(mask)
-        ax = sns.heatmap(corr_df, mask=mask)
-        #ax.set_title(f"(A) {model_name1} - (B) {model_name2}")
-        plt.suptitle(f"Correlation of layers\n{model_name1} - {model_name2}", weight="bold")
-        plt.tight_layout()
-        plt.show()
-        save_path = get_unique_save_path(os.path.join(save_dir,
-                                 '{}_{}_rdms.png'.format(model_name1, model_name2)))
-        plt.savefig(save_path)
-
     def make_dist_df(self, dist_matrix, model_name1, model_name2):
         names = []
         ann1 = re.search("\(([A-Za-z0-9]+)\)", model_name1)
@@ -263,9 +291,9 @@ class Evaluation:
 
                 corr_df = self.make_dist_df(corr_dist, model1[1], model2[1])
                 save_path = get_unique_save_path(os.path.join(csv_dir, f"{model1[1]}_{model2[1]}_rdms.csv"))
-                corr_df.to_csv(save_path, index=False)
+                corr_df.to_csv(save_path)
                 if self.cfg.plot:
-                    self.plot_rdms(corr_df, model1[1], model2[1], plot_dir)
+                    plot_rdms(corr_df, model1[1], model2[1], plot_dir)
 
                 del corr_dist
 
@@ -287,25 +315,6 @@ class Evaluation:
         plt.savefig(save_path)
         plt.show()
 
-    def plot_cka(self, cka_dist_df, model_name1, model_name2, save_dir):
-
-        plt.close()
-        mask = np.zeros_like(cka_dist_df)
-        mask[np.triu_indices_from(mask)] = True
-        mask = np.logical_xor(mask, np.identity(mask.shape[0]))
-        # submask = np.zeros((int(mask.shape[0] / 2), int(mask.shape[1] / 2)))
-        # submask[np.triu_indices_from(submask)] = True
-        # submask = np.logical_xor(submask, np.identity(submask.shape[0]))
-        # mask[int(mask.shape[0] / 2):, :int(mask.shape[1] / 2)] = submask
-        # print(mask)
-        ax = sns.heatmap(cka_dist_df, mask=mask)
-        plt.suptitle(f"CKA of layers:\n{model_name1} - {model_name2}", weight="bold")
-        plt.tight_layout()
-        plt.show()
-        save_path = get_unique_save_path(os.path.join(save_dir,
-                                 '{}_{}_cka.png'.format(model_name1, model_name2)))
-        plt.savefig(save_path)
-
     def cka_outer_analysis(self):
 
         csv_dir, plot_dir = self.make_save_dirs("cka")
@@ -322,9 +331,9 @@ class Evaluation:
                 # linear_cka_embedding = utils.repr_dist_embedding(linear_cka_dist_mat)
                 cka_dist_df = self.make_dist_df(linear_cka_dist_mat, model1[1], model2[1])
                 save_path = get_unique_save_path(os.path.join(csv_dir, f"{model1[1]}_{model2[1]}_cka.csv"))
-                cka_dist_df.to_csv(save_path, index=False)
+                cka_dist_df.to_csv(save_path)
                 if self.cfg.plot:
-                    self.plot_cka(cka_dist_df, model1[1], model2[1], plot_dir)
+                    plot_cka(cka_dist_df, model1[1], model2[1], plot_dir)
                 del linear_cka_dist_mat
 
     def evaluate(self):
