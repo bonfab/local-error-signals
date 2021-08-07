@@ -12,7 +12,7 @@ from models import AllCNN
 from utils.logging import get_unique_save_path
 from theoretical_framework_for_target_propagation.lib.conv_networks_AllCNN import DDTPPureConvAllCNNC, \
     DDTPPureShortCNNC_kernelmod
-from theoretical_framework_for_target_propagation.AllCNNC_backprop import AllCNNC_short_kernel
+from theoretical_framework_for_target_propagation.AllCNNC_backprop import AllCNNC_short_kernel, AllCNNC
 from theoretical_framework_for_target_propagation.allCNNC_main_last import args as args_original
 from theoretical_framework_for_target_propagation.allCNNC_main_last import \
     load_network_w_weights as load_network_w_weights_original
@@ -34,6 +34,54 @@ import representation_analysis_tools.intrinsic_dimension as id
 import representation_analysis_tools.rsa as rsa
 import representation_analysis_tools.utils as utils
 import representation_analysis_tools.centered_kernel_alignment as cka
+
+
+def plot_rdms(corr_df, model_name1, model_name2, save_dir, save_name=None):
+
+    plt.close()
+    mask = np.zeros_like(corr_df)
+    mask[np.triu_indices_from(mask)] = True
+    mask = np.logical_xor(mask, np.identity(mask.shape[0]))
+    """submask = np.zeros((int(mask.shape[0] / 2), int(mask.shape[1] / 2)))
+    submask[np.triu_indices_from(submask)] = True
+    submask = np.logical_xor(submask, np.identity(submask.shape[0]))
+    mask[int(mask.shape[0] / 2):, :int(mask.shape[1] / 2)] = submask"""
+    # print(mask)
+    ax = sns.heatmap(corr_df, mask=mask)
+    #ax.set_title(f"(A) {model_name1} - (B) {model_name2}")
+    plt.suptitle(f"RSA of layers\n{model_name1} - {model_name2}", weight="bold")
+    plt.tight_layout()
+    plt.show()
+    if save_name is None:
+        save_path = os.path.join(save_dir, '{}_{}_rdms.png'.format(model_name1, model_name2))
+    else:
+        save_path = os.path.join(save_dir, save_name)
+    save_path = get_unique_save_path(save_path)
+
+    plt.savefig(save_path)
+
+
+def plot_cka(cka_dist_df, model_name1, model_name2, save_dir, save_name=None):
+
+    plt.close()
+    mask = np.zeros_like(cka_dist_df)
+    mask[np.triu_indices_from(mask)] = True
+    mask = np.logical_xor(mask, np.identity(mask.shape[0]))
+    # submask = np.zeros((int(mask.shape[0] / 2), int(mask.shape[1] / 2)))
+    # submask[np.triu_indices_from(submask)] = True
+    # submask = np.logical_xor(submask, np.identity(submask.shape[0]))
+    # mask[int(mask.shape[0] / 2):, :int(mask.shape[1] / 2)] = submask
+    # print(mask)
+    ax = sns.heatmap(cka_dist_df, mask=mask)
+    plt.suptitle(f"CKA of layers:\n{model_name1} - {model_name2}", weight="bold")
+    plt.tight_layout()
+    plt.show()
+    if save_name is None:
+        save_path = os.path.join(save_dir, '{}_{}_cka.png'.format(model_name1, model_name2))
+    else:
+        save_path = os.path.join(save_dir, save_name)
+    save_path = get_unique_save_path(save_path)
+    plt.savefig(save_path)
 
 
 class Evaluation:
@@ -211,26 +259,6 @@ class Evaluation:
         plt.savefig(save_path)
         plt.show()
 
-    def plot_rdms(self, corr_df, model_name1, model_name2, save_dir):
-
-        plt.close()
-        mask = np.zeros_like(corr_df)
-        mask[np.triu_indices_from(mask)] = True
-        mask = np.logical_xor(mask, np.identity(mask.shape[0]))
-        """submask = np.zeros((int(mask.shape[0] / 2), int(mask.shape[1] / 2)))
-        submask[np.triu_indices_from(submask)] = True
-        submask = np.logical_xor(submask, np.identity(submask.shape[0]))
-        mask[int(mask.shape[0] / 2):, :int(mask.shape[1] / 2)] = submask"""
-        # print(mask)
-        ax = sns.heatmap(corr_df, mask=mask)
-        #ax.set_title(f"(A) {model_name1} - (B) {model_name2}")
-        plt.suptitle(f"Correlation of layers\n{model_name1} - {model_name2}", weight="bold")
-        plt.tight_layout()
-        plt.show()
-        save_path = get_unique_save_path(os.path.join(save_dir,
-                                 '{}_{}_rdms.png'.format(model_name1, model_name2)))
-        plt.savefig(save_path)
-
     def make_dist_df(self, dist_matrix, model_name1, model_name2):
         names = []
         ann1 = re.search("\(([A-Za-z0-9]+)\)", model_name1)
@@ -263,9 +291,9 @@ class Evaluation:
 
                 corr_df = self.make_dist_df(corr_dist, model1[1], model2[1])
                 save_path = get_unique_save_path(os.path.join(csv_dir, f"{model1[1]}_{model2[1]}_rdms.csv"))
-                corr_df.to_csv(save_path, index=False)
+                corr_df.to_csv(save_path)
                 if self.cfg.plot:
-                    self.plot_rdms(corr_df, model1[1], model2[1], plot_dir)
+                    plot_rdms(corr_df, model1[1], model2[1], plot_dir)
 
                 del corr_dist
 
@@ -287,25 +315,6 @@ class Evaluation:
         plt.savefig(save_path)
         plt.show()
 
-    def plot_cka(self, cka_dist_df, model_name1, model_name2, save_dir):
-
-        plt.close()
-        mask = np.zeros_like(cka_dist_df)
-        mask[np.triu_indices_from(mask)] = True
-        mask = np.logical_xor(mask, np.identity(mask.shape[0]))
-        # submask = np.zeros((int(mask.shape[0] / 2), int(mask.shape[1] / 2)))
-        # submask[np.triu_indices_from(submask)] = True
-        # submask = np.logical_xor(submask, np.identity(submask.shape[0]))
-        # mask[int(mask.shape[0] / 2):, :int(mask.shape[1] / 2)] = submask
-        # print(mask)
-        ax = sns.heatmap(cka_dist_df, mask=mask)
-        plt.suptitle(f"CKA of layers:\n{model_name1} - {model_name2}", weight="bold")
-        plt.tight_layout()
-        plt.show()
-        save_path = get_unique_save_path(os.path.join(save_dir,
-                                 '{}_{}_cka.png'.format(model_name1, model_name2)))
-        plt.savefig(save_path)
-
     def cka_outer_analysis(self):
 
         csv_dir, plot_dir = self.make_save_dirs("cka")
@@ -322,9 +331,9 @@ class Evaluation:
                 # linear_cka_embedding = utils.repr_dist_embedding(linear_cka_dist_mat)
                 cka_dist_df = self.make_dist_df(linear_cka_dist_mat, model1[1], model2[1])
                 save_path = get_unique_save_path(os.path.join(csv_dir, f"{model1[1]}_{model2[1]}_cka.csv"))
-                cka_dist_df.to_csv(save_path, index=False)
+                cka_dist_df.to_csv(save_path)
                 if self.cfg.plot:
-                    self.plot_cka(cka_dist_df, model1[1], model2[1], plot_dir)
+                    plot_cka(cka_dist_df, model1[1], model2[1], plot_dir)
                 del linear_cka_dist_mat
 
     def evaluate(self):
@@ -382,27 +391,28 @@ def main(cfg: OmegaConf):
     models = []
     names = [
         "Full Backprop (A1)",
-        "Prediction & Similarity Local Loss (B)",
+        #"Prediction & Similarity Local Loss (B)",
         "Full Backprop (A1)",
-        "Prediction & Similarity Local Loss (B)",
+        #"Prediction & Similarity Local Loss (B)",
         "Full Backprop (A1)",
-        "Prediction & Similarity Local Loss (B)",
-        "Full Backprop Short (A2)",
-        "Full Backprop Short (A2)",
-        "Full Backprop Short (A2)",
-        "Target Propagation Short (C)",
-        "Target Propagation Short (C)",
-        "Target Propagation Short (C)"
+        #"Prediction & Similarity Local Loss (B)",
+        #"Full Backprop Short (A2)",
+        #"Full Backprop Short (A2)",
+        #"Full Backprop Short (A2)",
+        #"Target Propagation Short (C)",
+        #"Target Propagation Short (C)",
+        #"Target Propagation Short (C)"
     ]
-    for path in cfg.models.model_paths.local_loss:
-        model, params = load_best_model_from_exp_dir(path)
-        models.append(model)
-        if len(names) < 1:
-            if params.model.loss.backprop:
-                name = params.model.name + "-backprop"
-            else:
-                name = params.model.name + "-" + params.model.loss.loss_sup
-            names.append(name)
+    if cfg.models.model_paths.local_loss is not None:
+        for path in cfg.models.model_paths.local_loss:
+            model, params = load_best_model_from_exp_dir(path)
+            models.append(model)
+            if len(names) < 1:
+                if params.model.loss.backprop:
+                    name = params.model.name + "-backprop"
+                else:
+                    name = params.model.name + "-" + params.model.loss.loss_sup
+                names.append(name)
     if cfg.models.model_paths.target_prop.all_cnn_short_backprop is not None:
         for i, path in enumerate(cfg.models.model_paths.target_prop.all_cnn_short_backprop):
             model = AllCNNC_short_kernel()
@@ -410,6 +420,14 @@ def main(cfg: OmegaConf):
             models.append(model)
             if len(names) < 1:
                 names.append(f"short-back-prop-{i}")
+
+    if cfg.models.model_paths.target_prop.all_cnn_original_backprop is not None:
+        for i, path in enumerate(cfg.models.model_paths.target_prop.all_cnn_original_backprop):
+            model = AllCNNC()
+            model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
+            models.append(model)
+            if len(names) < 1:
+                names.append(f"back-prop-{i}")
 
     if cfg.models.model_paths.target_prop.all_cnn_original is not None:
         for i, path in enumerate(cfg.models.model_paths.target_prop.all_cnn_original):
