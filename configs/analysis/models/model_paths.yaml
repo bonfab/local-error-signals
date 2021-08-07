@@ -1,12 +1,19 @@
 # @package _group_
 model_paths:
   local_loss:
-    - ${hydra:runtime.cwd}/../2021-06-18_12-50-30/0
-    - ${hydra:runtime.cwd}/../2021-06-18_12-50-30/3
+    #- ${hydra:runtime.cwd}/../2021-06-18_12-50-30/0
+    #- ${hydra:runtime.cwd}/../2021-06-18_12-50-30/0
+    #- ${hydra:runtime.cwd}/../2021-06-18_12-50-30/3
+    #- ${hydra:runtime.cwd}/../2021-06-18_12-50-30/3
   target_prop:
     all_cnn_short_backprop:
-      - ${hydra:runtime.cwd}/theoretical_framework_for_target_propagation/logs/backprop_ACNNC_short/weights_backprop.pth
+      #- ${hydra:runtime.cwd}/theoretical_framework_for_target_propagation/logs/backprop_ACNNC_short/weights_backprop.pth
     all_cnn_original:
 
+    all_cnn_original_backprop:
+      - ${hydra:runtime.cwd}/theoretical_framework_for_target_propagation/logs/backpropLong_differentSeeds/bp_seed10/weights_backprop.pth
+      - ${hydra:runtime.cwd}/theoretical_framework_for_target_propagation/logs/backpropLong_differentSeeds/bp_seed21/weights_backprop.pth
+      - ${hydra:runtime.cwd}/theoretical_framework_for_target_propagation/logs/backpropLong_differentSeeds/bp_seed42/weights_backprop.pth
     all_cnn_short:
-      - ${hydra:runtime.cwd}/theoretical_framework_for_target_propagation/logs/4_shortACNNC_100_kernel_adapt
+      #- ${hydra:runtime.cwd}/theoretical_framework_for_target_propagation/logs/differentSeeds/PureACNNCshort9
+     # - ${hydra:runtime.cwd}/theoretical_framework_for_target_propagation/logs/4_shortACNNC_100_kernel_adapt

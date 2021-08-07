@@ -12,7 +12,7 @@ from models import AllCNN
 from utils.logging import get_unique_save_path
 from theoretical_framework_for_target_propagation.lib.conv_networks_AllCNN import DDTPPureConvAllCNNC, \
     DDTPPureShortCNNC_kernelmod
-from theoretical_framework_for_target_propagation.AllCNNC_backprop import AllCNNC_short_kernel
+from theoretical_framework_for_target_propagation.AllCNNC_backprop import AllCNNC_short_kernel, AllCNNC
 from theoretical_framework_for_target_propagation.allCNNC_main_last import args as args_original
 from theoretical_framework_for_target_propagation.allCNNC_main_last import \
     load_network_w_weights as load_network_w_weights_original
@@ -392,20 +392,22 @@ def main(cfg: OmegaConf):
     names = [
         "Full Backprop (A1)",
         "Full Backprop (A1)",
-        "Prediction & Similarity Local Loss (B)",
-        "Prediction & Similarity Local Loss (B)",
-        "Full Backprop Short (A2)",
-        "Target Propagation Short (C)"
+        "Full Backprop (A1)"
+        #"Prediction & Similarity Local Loss (B)",
+        #"Prediction & Similarity Local Loss (B)",
+        #"Full Backprop Short (A2)",
+        #"Target Propagation Short (C)"
     ]
-    for path in cfg.models.model_paths.local_loss:
-        model, params = load_best_model_from_exp_dir(path)
-        models.append(model)
-        if len(names) < 1:
-            if params.model.loss.backprop:
-                name = params.model.name + "-backprop"
-            else:
-                name = params.model.name + "-" + params.model.loss.loss_sup
-            names.append(name)
+    if cfg.models.model_paths.local_loss is not None:
+        for path in cfg.models.model_paths.local_loss:
+            model, params = load_best_model_from_exp_dir(path)
+            models.append(model)
+            if len(names) < 1:
+                if params.model.loss.backprop:
+                    name = params.model.name + "-backprop"
+                else:
+                    name = params.model.name + "-" + params.model.loss.loss_sup
+                names.append(name)
     if cfg.models.model_paths.target_prop.all_cnn_short_backprop is not None:
         for i, path in enumerate(cfg.models.model_paths.target_prop.all_cnn_short_backprop):
             model = AllCNNC_short_kernel()
@@ -413,6 +415,14 @@ def main(cfg: OmegaConf):
             models.append(model)
             if len(names) < 1:
                 names.append(f"short-back-prop-{i}")
+
+    if cfg.models.model_paths.target_prop.all_cnn_original_backprop is not None:
+        for i, path in enumerate(cfg.models.model_paths.target_prop.all_cnn_original_backprop):
+            model = AllCNNC()
+            model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
+            models.append(model)
+            if len(names) < 1:
+                names.append(f"back-prop-{i}")
 
     if cfg.models.model_paths.target_prop.all_cnn_original is not None:
         for i, path in enumerate(cfg.models.model_paths.target_prop.all_cnn_original):
